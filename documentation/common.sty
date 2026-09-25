@@ -1,0 +1,431 @@
+% Packages
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{algorithm}
+\usepackage{graphicx}
+\usepackage{etoolbox}
+\usepackage{epstopdf}
+\usepackage{bm} 									% Bold maths is possible
+\usepackage{cancel}									% Strikethrough cancel line in maths
+\usepackage{tocbibind}								% Bibliography in contents
+\usepackage{amsthm}									% Theorem setup
+\usepackage[english]{babel}							% Default
+\usepackage{enumerate}
+\usepackage{algorithm,algpseudocode,algorithmicx,tabularx}				% Algorithm format
+\usepackage{algorithmicx}
+\usepackage{varwidth}
+\usepackage{mathrsfs}
+\usepackage{url}
+\usepackage{tikz}									% Figs
+\usetikzlibrary{positioning, patterns, shapes, decorations.text,matrix}
+\usepackage{tikz-3dplot}
+\usepackage{rotating}
+\usepackage{pstricks-add}
+% Multiple Figures
+
+\usepackage{subcaption}
+\usepackage{afterpage}
+\usepackage{bigints}
+\usepackage{mathtools}
+\usepackage{colortbl}
+\usepackage{pdfpages}
+
+\usepackage{bbm}
+
+%% Bibliography
+% Deprecated Bibtex
+%\usepackage{cite}
+%\usepackage{natbib}
+%\usepackage{bibentry} % Able to print entire bib entry in text
+% New BibLaTeX
+%\usepackage{csquotes}
+\usepackage[style=authoryear,maxnames=2,uniquelist=false]{biblatex}
+%\addbibresource{../../../PhD/Bibliography/library.bib}
+
+
+\usepackage{nomencl}
+% Multi columns
+\usepackage{multicol}
+
+% Character Styles
+%% Theorems
+% Proper appendix numbering
+\usepackage{chngcntr}
+\usepackage{apptools}
+
+\AtAppendix{\counterwithin{proposition}{section}}
+\AtAppendix{\counterwithin{theorem}{section}}
+\AtAppendix{\counterwithin{definition}{chapter}}
+\AtAppendix{\counterwithin{corollary}{section}}
+\AtAppendix{\counterwithin{lemma}{chapter}}
+
+\newtheorem{proposition}{Proposition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{definition}{Definition}
+\AfterEndEnvironment{definition}{\noindent\ignorespaces} %no new paragraph after theorem
+\newtheorem{lemma}{Lemma}
+\newtheorem{lemmacorollary}{Corollary}[lemma]
+\AfterEndEnvironment{lemmacorollary}{\noindent\ignorespaces}
+\newtheorem{corollary}{Corollary}[theorem]
+\AfterEndEnvironment{corollary}{\noindent\ignorespaces}
+
+%% Checkmarks
+\usepackage{pifont}% http://ctan.org/pkg/pifont
+\newcommand{\cmark}{\ding{51}}%
+\newcommand{\xmark}{\ding{55}}%
+
+%% Symbols
+
+\newcommand{\mfF}{{\mathscr{F}}}
+\newcommand{\mfSigma}{{\mathscr{\Sigma}}}
+
+%% Bold Character Styles
+\newcommand{\ba}{{\bm a}}
+\newcommand{\bbb}{{\bm b}}
+\newcommand{\bff}{{\bm f}}
+\newcommand{\bk}{{\bm k}}
+\newcommand{\bl}{{\bm l}}
+\newcommand{\bbm}{{\bm m}}
+\newcommand{\bq}{{\bm q}}
+\newcommand{\br}{{\bm r}}
+\newcommand{\bs}{{\bm s}}
+\newcommand{\bu}{{\bm u}}
+\newcommand{\bv}{{\bm v}}
+\newcommand{\bw}{{\bm w}}
+\newcommand{\bx}{{\bm x}}
+\newcommand{\by}{{\bm y}}
+\newcommand{\bz}{{\bm z}}
+
+\newcommand{\balpha}{\boldsymbol{\alpha}}
+\newcommand{\bbeta}{\boldsymbol{\beta}}
+\newcommand{\bdelta}{\boldsymbol{\delta}}
+\newcommand{\bmu}{\boldsymbol{\mu}}
+\newcommand{\bgamma}{\boldsymbol{\gamma}}
+\newcommand{\bpsi}{\boldsymbol{\psi}}
+\newcommand{\brho}{\boldsymbol{\rho}}
+\newcommand{\bsigma}{\boldsymbol{\sigma}}
+\newcommand{\bphi}{\boldsymbol{\phi}}
+\newcommand{\btheta}{\boldsymbol{\theta}}
+\newcommand{\bvartheta}{\boldsymbol{\vartheta}}
+\newcommand{\bvarphi}{\boldsymbol{\varphi}}
+\newcommand{\bepsilon}{\boldsymbol{\epsilon}}
+\newcommand{\bvarepsilon}{\boldsymbol{\varepsilon}}
+\newcommand{\cvarepsilon}{\mathcal{E}}
+\newcommand{\bupsilon}{\boldsymbol{\upsilon}}
+\newcommand{\bxi}{\boldsymbol{\xi}}
+\newcommand{\bzeta}{\boldsymbol{\zeta}}
+\newcommand{\bnu}{\boldsymbol{\nu}}
+\newcommand{\bomega}{\boldsymbol{\omega}}
+
+\newcommand{\bA}{{\bm A}}
+\newcommand{\bB}{{\bm B}}
+\newcommand{\bC}{{\bm C}}
+\newcommand{\bD}{{\bm D}}
+\newcommand{\bF}{{\bm F}}
+\newcommand{\bI}{{\bm I}}
+\newcommand{\bK}{{\bm K}}
+\newcommand{\bL}{{\bm L}}
+\newcommand{\bP}{{\bm P}}
+\newcommand{\bS}{{\bm S}}
+\newcommand{\bV}{{\bm V}}
+\newcommand{\bW}{{\bm W}}
+\newcommand{\bX}{{\bm X}}
+\newcommand{\bY}{{\bm Y}}
+\newcommand{\bZ}{{\bm Z}}
+
+
+\newcommand{\bGamma}{\boldsymbol{\Gamma}}
+\newcommand{\bDelta}{\boldsymbol{\Delta}}
+\newcommand{\bLambda}{\boldsymbol{\Lambda}}
+\newcommand{\bPsi}{\boldsymbol{\Psi}}
+\newcommand{\bPhi}{\boldsymbol{\Phi}}
+\newcommand{\bPi}{\boldsymbol{\Pi}}
+\newcommand{\bRho}{\boldsymbol{\Rho}}
+\newcommand{\bSigma}{\boldsymbol{\Sigma}}
+\newcommand{\bTheta}{\boldsymbol{\Theta}}
+\newcommand{\bUpsilon}{\boldsymbol{\Upsilon}}
+\newcommand{\bXi}{\boldsymbol{\Xi}}
+
+
+%% Vetors
+\newcommand{\ma}{{\matr{a}}}
+\newcommand{\mb}{{\matr{b}}}
+\newcommand{\mc}{{\matr{c}}}
+\newcommand{\md}{{\matr{d}}}
+\newcommand{\me}{{\matr{e}}}
+\newcommand{\mf}{{\matr{f}}}
+\newcommand{\mg}{{\matr{g}}}
+\newcommand{\mh}{{\matr{h}}}
+\newcommand{\mk}{{\matr{k}}}
+\newcommand{\ml}{{\matr{l}}}
+\newcommand{\mm}{{\matr{m}}}
+\newcommand{\mpp}{{\matr{p}}}
+\newcommand{\mq}{{\matr{q}}}
+\newcommand{\mr}{{\matr{r}}}
+\newcommand{\ms}{{\matr{s}}}
+\newcommand{\um}{{\matr{u}}}
+\newcommand{\mv}{{\matr{v}}}
+\newcommand{\mw}{{\matr{w}}}
+\newcommand{\mx}{{\matr{x}}}
+\newcommand{\my}{{\matr{y}}}
+\newcommand{\mz}{{\matr{z}}}
+
+\newcommand{\malpha}{\balpha}
+\newcommand{\mbeta}{\bbeta}
+\newcommand{\mdelta}{\bdelta}
+\newcommand{\mgamma}{\bgamma}
+\newcommand{\mpsi}{\bpsi}
+\newcommand{\mphi}{\bphi}
+\newcommand{\mmu}{\bmu}
+\newcommand{\mrho}{\brho}
+\newcommand{\msigma}{\bsigma}
+\newcommand{\mtheta}{\btheta}
+\newcommand{\mepsilon}{\bepsilon}
+\newcommand{\mvarepsilon}{\bvarepsilon}
+\newcommand{\mvartheta}{\bvartheta}
+\newcommand{\mvarphi}{\bvarphi}
+\newcommand{\mupsilon}{\bupsilon}
+\newcommand{\mzeta}{\bzeta}
+\newcommand{\mzero}{{\matr{0}}}
+\newcommand{\mone}{{\matr{1}}}
+\newcommand{\mxi}{\bxi}
+\newcommand{\mnu}{\bnu}
+\newcommand{\momega}{\bomega}
+
+%% Matrices
+\newcommand{\mA}{{\matr{A}}}
+\newcommand{\mB}{{\matr{B}}}
+\newcommand{\mC}{{\matr{C}}}
+\newcommand{\mF}{{\matr{F}}}
+\newcommand{\mD}{{\matr{D}}}
+\newcommand{\mG}{{\matr{G}}}
+\newcommand{\mH}{{\matr{H}}}
+\newcommand{\mI}{{\matr{I}}}
+\newcommand{\mJ}{{\matr{J}}}
+\newcommand{\mK}{{\matr{K}}}
+\newcommand{\mL}{{\matr{L}}}
+\newcommand{\mM}{{\matr{M}}}
+\newcommand{\mP}{{\matr{P}}}
+\newcommand{\mQ}{{\matr{Q}}}
+\newcommand{\mR}{{\matr{R}}}
+\newcommand{\mS}{{\matr{S}}}
+\newcommand{\mU}{{\matr{U}}}
+\newcommand{\mV}{{\matr{V}}}
+\newcommand{\mW}{{\matr{W}}}
+\newcommand{\mX}{{\matr{X}}}
+\newcommand{\mY}{{\matr{Y}}}
+\newcommand{\mZ}{{\matr{Z}}}
+
+\newcommand{\mGamma}{\bGamma}
+\newcommand{\mDelta}{\bDelta}
+\newcommand{\mLambda}{\bLambda}
+\newcommand{\mPsi}{\bPsi}
+\newcommand{\mPhi}{\bPhi}
+\newcommand{\mPi}{\bPi}
+\newcommand{\mRho}{\bRho}
+\newcommand{\mSigma}{\bSigma}
+\newcommand{\mTheta}{\bTheta}
+\newcommand{\mUpsilon}{\bUpsilon}
+\newcommand{\mXi}{\bXi}
+
+\newcommand{\mZero}{{\matr{0}}}
+
+\newcommand{\cA}{{\mathcal A}}
+\newcommand{\cB}{{\mathcal B}}
+\newcommand{\cC}{{\mathcal C}}
+\newcommand{\cD}{{\mathcal D}}
+\newcommand{\cE}{{\mathcal E}}
+\newcommand{\cF}{{\mathcal F}}
+\newcommand{\cG}{{\mathcal G}}
+\newcommand{\cH}{{\mathcal H}}
+\newcommand{\cI}{{\mathcal I}}
+\newcommand{\cJ}{{\mathcal J}}
+\newcommand{\cK}{{\mathcal K}}
+\newcommand{\cL}{{\mathcal L}}
+\newcommand{\cM}{{\mathcal M}}
+\newcommand{\cN}{{\mathcal N}}
+\newcommand{\cO}{{\mathcal O}}
+\newcommand{\cP}{{\mathcal P}}
+\newcommand{\cQ}{{\mathcal Q}}
+\newcommand{\cR}{{\mathcal R}}
+\newcommand{\cS}{{\mathcal S}}
+\newcommand{\cT}{{\mathcal T}}
+\newcommand{\cV}{{\mathcal V}}
+\newcommand{\cW}{{\mathcal W}}
+\newcommand{\cX}{{\mathcal X}}
+\newcommand{\cY}{{\mathcal Y}}
+\newcommand{\cZ}{{\mathcal Z}}
+
+\newcommand{\cl}{{\ell}}
+
+\newcommand{\cPi}{\Pi}
+
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\Cmplx}{\mathbb{C}}
+\newcommand{\Z}{\mathbb{Z}}
+
+%% Maths
+% Symbols
+\newcommand{\Loss}{\cL}
+\newcommand{\Expec}{\E}
+\newcommand{\Real}{\R}
+\newcommand{\bigO}[1]{\cO({#1})}
+
+% Equation
+\newcommand\numberthis{\addtocounter{equation}{1}\tag{\theequation}}
+% Operators
+\DeclareMathOperator*{\argsup}{arg\,sup}
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\sinc}{sinc}
+\DeclareMathOperator*{\prox}{prox}
+\newcommand{\proxu}[2]{{\underset{#1}\prox{[#2]}}}
+\newcommand{\argminu}[2]{{\underset{#1}\argmin{[#2]}}}
+\newcommand{\bigargminu}[2]{{\underset{#1}\argmin{\big[#2\big]}}}
+\newcommand{\biggargminu}[2]{{\underset{#1}\argmin{\bigg[#2\bigg]}}}
+\newcommand{\argmaxu}[2]{{\underset{#1}\argmax{[#2]}}}
+\newcommand{\bigargmaxu}[2]{{\underset{#1}\argmax{\big[#2\big]}}}
+\newcommand{\argsupu}[2]{{\underset{#1}\argsup{[#2]}}}
+\newcommand{\bigargsupu}[2]{{\underset{#1}\argsup{\big[#2\big]}}}
+\newcommand{\biggargsupu}[2]{{\underset{#1}\argsup{\bigg[#2\bigg]}}}
+\newcommand{\maxu}[2]{{\underset{#1}\max{[#2]}}}
+\newcommand{\minu}[2]{{\underset{#1}\min{[#2]}}}
+\newcommand{\bigminu}[2]{{\underset{#1}\min{\big[#2\big]}}}
+\newcommand{\biggminu}[2]{{\underset{#1}\min{\bigg[#2\bigg]}}}
+\newcommand{\bigsupu}[2]{{\underset{#1}\sup{\big[#2\big]}}}
+\newcommand{\biggsupu}[2]{{\underset{#1}\sup{\bigg[#2\bigg]}}}
+\newcommand{\supu}[2]{{\underset{#1}\sup{[#2]}}}
+\newcommand{\limu}[2]{{\underset{#1}\lim{#2}}}
+\newcommand{\limsupu}[2]{{\underset{#1}\limsup{#2}}}
+\newcommand{\innerpu}[3]{{{\langle{#1},{#2}\rangle}_{#3}}} 
+\newcommand{\innerp}[3]{{\langle{#1},{#2}\rangle_{#3}}}
+\newcommand{\biginnerp}[3]{{\big\langle{#1},{#2}\big\rangle_{#3}}} 
+\newcommand{\biginnerpu}[3]{{{\big\langle{#1},{#2}\big\rangle}_{#3}}} 
+\newcommand{\from}{{\leftarrow}}
+\newcommand{\getss}{{\gets}}
+\newcommand{\subseteqs}{{\subseteq}}
+% Matrices
+\newcommand{\matr}[1]{\mathbf{#1}} 
+%Probabilty
+\newcommand{\Prb}{\text{Pr}}
+
+\makeatletter
+\newcommand*\bigcdot{\mathpalette\bigcdot@{.5}}
+\newcommand*\bigcdot@[2]{\mathbin{\vcenter{\hbox{\scalebox{#2}{$\m@th#1\bullet$}}}}}
+\newcommand*\bigcdotb{\mathpalette\bigcdotb@{.75}}
+\newcommand*\bigcdotb@[2]{\mathbin{\vcenter{\hbox{\scalebox{#2}{$\m@th#1\bullet$}}}}}
+\makeatother
+
+%% TOC
+% Contents depth
+\setcounter{secnumdepth}{2}
+\setcounter{tocdepth}{3}
+%
+\usepackage{titletoc,tocloft}
+\setlength{\cftsubsubsecindent}{3.4cm}
+
+
+%% Refs
+\newcommand{\chref}[1]{Chapter \ref{#1}}
+\newcommand{\citer}[1]{{\citep{#1}}}
+\newcommand{\citeb}[1]{({\cite{#1}})}
+\newcommand{\figref}[1]{fig. \ref{#1}}
+\newcommand{\secref}[1]{section \ref{#1}}
+\newcommand{\appdxref}[1]{appendix \ref{#1}}
+\newcommand{\Secref}[1]{Section \ref{#1}}
+\newcommand{\algmref}[1]{algorithm \ref{#1}}
+\newcommand{\tabref}[1]{table \ref{#1}}
+\newcommand{\eqnref}[1]{equation \eqref{#1}}
+\newcommand{\secrefname}[1]{section \nameref{#1} \ref{#1}}
+\newcommand{\Secrefname}[1]{section \nameref{#1} \ref{#1}}
+\newcommand{\thmref}[1]{theorem \ref{#1}}
+\newcommand{\lemref}[1]{lemma \ref{#1}}
+\newcommand{\defref}[1]{definition \ref{#1}}
+\newcommand{\corref}[1]{corollary \ref{#1}}
+
+%% Loops
+\algdef{SE}[DOWHILE]{Do}{doWhile}{\algorithmicdo}[1]{\algorithmicwhile\ #1}%
+
+\algnewcommand\algorithmicforeach{\textbf{for each}}
+\algdef{S}[FOR]{ForEach}[1]{\algorithmicforeach\ #1\ \algorithmicdo}
+
+\makeatletter
+\newcommand{\multiline}[1]{%
+	\begin{tabularx}{\dimexpr\linewidth-\ALG@thistlm}[t]{@{}X@{}}
+		#1
+	\end{tabularx}
+}
+\makeatother
+
+%% Spacing
+\newcommand{\sml}[1]{\,{#1}\,}
+\newcommand{\sims}{\sml{\sim}}
+\newcommand{\eqs}{\sml{=}}
+\newcommand{\approxs}{\sml{\approx}}
+\newcommand{\ins}{\sml{\in}}
+\newcommand{\tos}{\sml{\to}}
+\newcommand{\leqs}{\sml{\leq}}
+\newcommand{\geqs}{\sml{\geq}}
+\newcommand{\les}{\sml{<}}
+\newcommand{\mores}{\sml{>}}
+\newcommand{\ps}{\sml{+}}
+\newcommand{\sbs}{\sml{-}}
+\newcommand{\sseqs}{\sml{\subseteq}}
+\newcommand{\ssets}{\sml{\subset}}
+\newcommand{\timess}{\sml{\times}}
+\newcommand{\defs}{{\,{:}{=}\,}}
+\newcommand{\leftdefs}{{\,{:}}}
+\newcommand{\rightdefs}{{{=}\,}}
+
+\newcommand{\neqs}{\sml{\neq}}
+\newcommand{\larrows}{\sml{\leftarrow}}
+
+
+\newcommand{\smll}[1]{{#1}}
+\newcommand{\simss}{\smll{\sim}}
+\newcommand{\eqss}{\smll{=}}
+\newcommand{\approxss}{\smll{\approx}}
+\newcommand{\inss}{\smll{\in}}
+\newcommand{\toss}{\smll{\to}}
+\newcommand{\leqss}{\smll{\leq}}
+\newcommand{\geqss}{\smll{\geq}}
+\newcommand{\less}{\smll{<}}
+\newcommand{\moress}{\smll{>}}
+\newcommand{\pss}{\smll{+}}
+\newcommand{\sbss}{\smll{-}}
+\newcommand{\sseqss}{\smll{\subseteq}}
+\newcommand{\ssetss}{\smll{\subset}}
+\newcommand{\timesss}{\smll{\times}}
+\newcommand{\defss}{{{:}{=}}}
+\newcommand{\neqss}{\smll{\neq}}
+
+%\SetKwFor{For}{for (}{) $\lbrace$}{$\rbrace$} %C style for loops
+
+% Space above caption
+%\captionsetup[table]{skip=10pt}
+%\setlength{\abovecaptionskip}{15pt plus 3pt minus 2pt} 
+
+%% Fonts
+\newcommand{\timesFont}[1]{
+{\fontfamily{ptm}\selectfont
+{#1}
+}
+}
+
+%Nomenclature spacing
+\setlength{\nomitemsep}{-0.5\parsep}
+
+%% Spacing around math
+\newcommand{\zerodisplayskips}{%
+  \setlength{\abovedisplayskip}{7pt}%
+  \setlength{\belowdisplayskip}{10pt}%
+  \setlength{\abovedisplayshortskip}{7pt}%
+  \setlength{\belowdisplayshortskip}{7pt}}
+\appto{\normalsize}{\zerodisplayskips}
+\appto{\small}{\zerodisplayskips}
+\appto{\footnotesize}{\zerodisplayskips}
+
+

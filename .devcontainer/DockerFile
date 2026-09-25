@@ -1,0 +1,40 @@
+FROM texlive/texlive:latest-full@sha256:ce96b0b88bc10b50e290e845542e09356f30008dde3a5d5cbbb84391c6024717
+
+USER root
+
+# Show the repositories provided by the base image.
+RUN echo "Base image package repositories:" && \
+    cat /etc/apt/sources.list.d/* 2>/dev/null || true
+
+# Use HTTPS for Debian repositories where configured.
+RUN find /etc/apt/sources.list /etc/apt/sources.list.d \
+    -type f -exec sed -i \
+    -e 's|http://deb.debian.org|https://deb.debian.org|g' \
+    -e 's|http://security.debian.org|https://security.debian.org|g' \
+    {} + 2>/dev/null || true
+
+# Install development/document-processing tools.
+RUN rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/* && \
+    apt-get clean && \
+    apt-get update \
+    -o Acquire::Retries=10 && \
+    apt-get install -y --no-install-recommends \
+    curl \
+    fonts-adobe-sourcesans3 \
+    fontconfig \
+    poppler-utils \
+    qpdf \
+    inkscape \
+    xclip && \
+    rm -rf /var/lib/apt/lists/* /var/cache/apt/archives/*
+
+# Install OpenCode for the development user rather than /root.
+USER texlive
+
+RUN curl -fsSL https://opencode.ai/install -o /tmp/install.sh && \
+    bash /tmp/install.sh 1.2.0 && \
+    rm -f /tmp/install.sh
+
+ENV PATH="/home/texlive/.local/bin:${PATH}"
+
+USER texlive

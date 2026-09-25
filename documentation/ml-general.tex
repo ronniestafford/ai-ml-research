@@ -1,0 +1,209 @@
+\documentclass[11pt,a4paper]{report}
+
+\usepackage{../ronnie-common}
+%\usepackage{sectsty}
+
+\usepackage{csquotes}
+\addbibresource{../../../PhD/Bibliography/library.bib}
+\graphicspath{ {./images/} }
+
+% Margins
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.5in
+\headsep=0.25in
+
+\title{Summary notes for\\\citetitle{book-murphy-2012-ml}}
+\author{Ronnie Stafford}
+\date{\today}
+
+\begin{document}
+\maketitle	
+
+\chapter{Introduction}
+
+Want to view the following with probabilistic lens.
+
+\section{Supervised Learning (SL)}
+
+\subsection{Basic Concepts}
+Data $\cD\eqs{\{(\mx_{i}, \my_{i})\}}_{i=1}^{n}$, input variables $\mx\ins\cX\subseteq\R^{d}$ (where each element of an $\mx$ is a {\bf feature} or covariate which can be categorical such as shape or continuous such as size, but $\mx$ can also be a more complex object such as a document) with response variables
+\begin{itemize}
+	\item Binary classification: $y\ins\{0,1\}$, 
+	\item Multi-label classification: $y\ins\{1,...,C\}$ for $C>2$,
+	\item Multi-ouput classification: $\my\ins\{{\{0,1\}}_{k}\}_{k=1}^{C}$
+	if classes are not mututally exclusive (best viewed as multi-binary class labels such that a multi-output model is learnt).
+	\item Regression: $\my\ins\cY\subseteq\R^{D}$,
+\end{itemize}
+
+\subsection {Linear Regression}
+Response variable $y$ is continuous,
+\begin{align}
+	Y\sims p(\cdot|\mx,\mtheta)&\eqs\cN(\cdot|\mu(\mx),\sigma^{2}),\\
+	&\eqs \mu(\mx)+\sigma^{2},
+\end{align}
+with linear $\mu(\mx)\eqs\mw^{\top}\mphi(\mx)$, features $\mphi(\cdot)$, fixed noise $\sigma^{2}(\mx)=\sigma^{2}$ and $\mtheta\defs\{\mw,\sigma\}$ (bias term included in the weights).
+
+\subsection {Classification}
+Response variable $y$ is discrete, the aim is conditional density $Y\sims p(\cdot|\mx,\cD,M)$ estimation.
+
+
+\subsubsection{Linear Logistic Regression (Binary Class)}
+Choose the logistic/logit/s-shaped/sigmoid function $\mu(\mx)\defs\text{sigm}(\mw^{\top}\mx)$ (with bias included) where $\text{sigm}:\R\tos[0,1]$, so
+\begin{align*}
+	p(Y=1|\mx,\mw)\eqs&\text{sigm}(\mw^{\top}\mx),\\
+	\eqs&\frac{1}{1+e^{-\mw^{\top}\mx}},\\
+	\eqs&\frac{e^{\mw^{\top}\mx}}{e^{\mw^{\top}\mx}+1},\\
+	p(Y=0|\mx,\mw)\eqs&1-\text{sigm}(\mw^{\top}\mx),\\
+	\eqs&\frac{1}{e^{\mw^{\top}\mx}+1},
+\end{align*}
+is used because $y$ is binary.
+
+\subsection{Linear Multinomial Logistic Regression (Multi Class)}
+Generalisation to softmax,
+
+
+
+\subsubsection{Linear Multinomial Regression (Multi Classification)}
+
+\subsubsection{Maximim Posteriori (MAP) Estimate}
+Once the conditional density has been estimated, then classification can be ahieved using MAP estimation,
+\begin{align}
+	\hat{y}\eqs\hat{f}(\mx)\eqs\bigargmaxu{c\ins\{1,..,C\}}{p(y\eqs c|\mx,\cD,M)},
+\end{align}
+where model class $M\ins\cM$. The discrete probability distribution $p(\cdot|\mx,\cD)\ins\R^{C}$, but only needs to be described by $C-1$ numbers as $\sum_{c\ins C}p(y\eqs c|\mx,\cD,M)=1$. The same effect can be achieved by assuming there exists an unknown function $y\eqs{f}(\mx)$. Supervised learning (SL) estimates this function by learning a predictor $\hat{f}:\cX\tos\cY$ where $\hat{f}\ins\cF$.
+ 
+\subsubsection{K-nearest neighbours (KNN) Classifier}
+Non-parametric (as the number of parameters increaes with $|\cD|$) classifier with {\bf hyperparameter} $K$ nearest neighbours with classes $c\ins\{1,...,C\}$,
+\begin{align}
+	p(y=c|\mx,\cD,K)\eqs \frac{1}{K}\sum_{i\inss N_{K}(\mx,\cD)}\mathbbm{1}{(y_{i}\eqs c)},
+\end{align}
+where $N_{K}(\mx,\cD)$ is the collection of indices of the $K$ nearest points (usually by a Euclidean distance metric) to $\mx\ins\cD$. By keeping $c$ constant, plotting $p(y=c|\mx,\cD,K)$ over $\cX$ is common for analysis (repeating for each class). Then plot the MAP estimate over $\cX$. $K\eqs 1$ induces voronoi tesselation.
+
+
+\subsubsection{Real World Examples}
+\paragraph{Document Classification}
+Classify documents $\mx$ (web page, email) into C classes e.g. $\{0,1\}$ for spam or ham. For variable length documents, use a bag of words size $|\cW|$ i.e. for $i^{th}$ document, $x_{ij}\eqs 1$ iff word $j$ occurs, therefore word occurance matrix is $\mX\ins\R^{n\times|\cW|}$.
+\paragraph{Flower Classification}
+Samples are $\mx\ins\{\text{sepal length}, \text{sepal width}, \text{petal length}, \text{petal width}\}\ins\R^4$, see \figref{fig:petals-scatter}. It's easy to separate Setosas using petal length or petal width alone (just a threshold for either feature). But the other two classes are harder to separate and will no doubt need a minimum of two features to separate them. 
+\begin{figure}[ht]
+	\centering
+	\includegraphics[scale=0.6]{flowers_pairwise}
+	\caption{Scatterplot and distributions of petal features.}
+	\label{fig:petals-scatter}
+\end{figure}
+
+
+
+\section{Unsupervised Learning (USL)}
+Data $\cD\eqs{\{\mx_{i}\}}_{i=1}^{n}$ with no labels or response. Can be considered as just a response variable, goal is to uncover structure by executing knowledge doscovery. Formalise as {\bf density estimation} by building models of the form $p(\mx_{i}|\mtheta)$ (c.f. conditional desnity estimation in SL).
+
+\subsection{Clustering}
+\subsubsection{Discovering Clusters}
+K number of clusters, either model full distribution $p(K|\cD)$ or approximate it with all weight on the mode,
+\begin{align}
+	K^{*}\eqs\argmaxu{K\ins\{1,...,K\}}{p(K|\cD)},
+\end{align}
+the higher the number of clusters, the more complex the model, so need to find the "right" complexity. Let $z_{i}\ins\{1,...,K\}$ is a hidden latent variable that data $\mx_{i}$ is assigned to, then
+\begin{align}
+	z_{i}^{*}\eqs \argmaxu{k\ins\{1,...,K\}}{p(z_{i}\eqs k|\mx_{i},\cD)}
+\end{align}
+
+\subsubsection{Real World Examples}
+
+{\bf E-commerce} applications include clustering customers based on their purchasing/web activity. Then target advertising to each group.
+{\bf Discovering types stars or cells} by clustering data based on features, then additional sub-populations are discovered.
+
+\subsection{Discovering Latent Factors}
+Dimenensionality reduction, subset of directions (latent factors) in the data that better explain data variability. We observe response variables $\cD=\{\my_{i}\}$
+
+\subsubsection{ICA \& PCA}
+Observe high-dimensional data and make a mapping to a low dimension latent state $f:\my\tos\mz$.
+
+\subsubsection{Real World Examples}
+{\bf Gene microarray} observations $\my_{i}$ are usually the result of many genes which are correlated in their behaviour. {\bf signal processing} uses ICA to separate out multiple accoustic signals. {\bf NLP} uses a variant of PCA for latent semantic analysis in document retrieval. General projection down to a low dimensional state is desireable in many applications.
+
+\subsection{Other ML Concepts}
+\subsubsection{Curse of Dimensionality}
+KNN suffers in high dimensions. Assume uniformly distributed data and hypercube of dimension $D$ and side length $l$, then
+then the hypercube of side length $a\leqs l$ covers a fraction of data,
+\begin{align}
+	\cD_{\text{frac}}&\eqs \bigg(\frac{al}{l}\bigg)^{D},\\
+	&\eqs a^{D},\\
+	\implies a&\eqs \cD_{\text{frac}}^{\frac{1}{D}}.
+\end{align}
+For high $D$ you need increasingly larger $a$ to cover the same amount of data. For KNN this means that it will be increasingly non local (no longer nearest neighbours). Combat by making some assumption on $p(y|\mx)$ (SL) or $p(\mx)$ (USL) known as {\bf inductive bias}. This usually takes the form of a parametric model with a fixed number of parameters.
+
+
+\chapter{Probability}
+\section{Discrete Distributions}
+Expressed with PMFs.
+
+\subsection{Binomial}
+Toss coin $n$ times, let number of heads be $X\ins\{0,...,n\}$, for any one toss $\Prb(\text{heads})\eqs\theta$, then
+\begin{align*}
+	X\sims&\text{Bin}(\cdot|n,\theta),\\
+	\text{Bin}(X\eqs k|n,\theta)\defs&\begin{pmatrix} n\\k \end{pmatrix} \theta^{k}(1-\theta)^{n-k},\\
+	\E[X]\eqs&n\theta,\\
+	\text{Var}[X]\eqs&n\theta(1-\theta),
+\end{align*}
+where $k$ is the number of heads in the pmf, and $n$ choose $k$ (binomial coefficient) is the number of ways of choosing $k$ items from $n$,
+\begin{align*}
+	\begin{pmatrix} n\\k \end{pmatrix} \defs \frac{n!}{(n-k)!k!},
+\end{align*}
+which is the number of ways a set of size $n\eqs k\pss (n\sbss k)$ can be arranged when split into subsets of sizes $n$ and $n\sbss k$.
+
+\subsection{Bernoulli}
+For the special case of $n=1$ toss such that $X\ins\{0,1\}$, then
+\begin{align*}
+	X\sims&\text{Ber}(\cdot|\theta),\\
+	\text{Ber}(\cdot|\theta)\defs&\theta^{\mathbbm{1}(X=1)}(1-\theta)^{\mathbbm{1}(X=0)},\\
+	\E[X]\eqs&\theta,\\
+	\text{Var}[X]\eqs&\theta(1-\theta),
+\end{align*}
+
+\subsection{Multinomial}
+Roll $K$-sided dice $n$ times. Let $\mX\eqs [X_{1},...,X_{K}]^{\top}$ where $X_{j}\ins\{0,...,n\}$ is the number of times side $j$ is rolled, $\Prb(\text{side}_{j})\eqs\theta_{j}$, $\mtheta\defs [\theta_{1},...,\theta_{K}]^{\top}$ (where $\sum_{k=1}^{K}\theta_{k}\eqs 1$). If $\mx=[x_{1},...,x_{K}]^{\top}$ (where $n\eqs \sum_{k=1}^{K}x_{k}$), then
+\begin{align*}
+	X\sims&\text{Mu}(\cdot|n,\mtheta),\\
+	\text{Mu}(X\eqs \mx|n,\theta)\defs&\begin{pmatrix} n\\x_{1},...,x_{K} \end{pmatrix}\prod_{j=1}^{K}\theta_{j}^{x_{j}},\\
+	\E[X]\eqs&n\mtheta,\\	
+    \text{Var}[X]\eqs& n[\text{diag}(\mtheta)-\mtheta\mtheta^{\top}],\\
+	\text{Var}[X_{j}]\eqs&n\theta_{j}(1-\theta_{j}),\\
+	\text{Cov}[X_{i},X_{j}]\eqs&n\theta_{i}\theta_{j},
+\end{align*}
+where 
+\begin{align*}
+	\begin{pmatrix} n\\x_{1},...,x_{K} \end{pmatrix}\defs\frac{n!}{x_{1}!,...,x_{K}!}
+\end{align*}
+is the multinomial coefficient which is the number of ways a set of size $n\eqs \sum_{k=1}^{K}x_{k}$ can be arranged when split into subsets of sizes $x_{1}$ through $x_{K}$.
+
+\subsection{Multinoulli Distribution}
+Roll $K$-sided dice once, $X_{j}\ins\{0,1\}$, so $X$ is now a random binary vector in which only one (say the $k^{\text{th}}$) bit is allowed to be turned on. We can now set up a $K$-categorical problem where the scalar value $x\eqs k$ represents the $k^\text{th}$ category, which is represented by a dummy encoding as a one-hot (only one of the $K$ wires is `hot') encoding vector $\mx\eqs[\mathbbm{1}(x=1),...,\mathbbm{1}(x=K)]^{\top}$. The pmf is therefore
+\begin{align*}
+	X\sims&\text{Mu}(\cdot|\mtheta),\\
+	\text{Mu}(X\eqs \mx|,\theta)\defs&\prod_{j=1}^{K}\theta_{j}^{\mathbbm{1}(x_{j}\eqs1)}.
+\end{align*}
+
+\subsection{Summary}
+\begin{itemize}
+	\item Bernoulli $K=1$ (success/failure, heads/tails), $n=1$ (one coin toss): $x\ins\{0,1\}\ins\R$, 
+	\item Binomial $K=1$, $n$ (coin tosses): $x\ins\{0,1,...,n\}\ins\R$,
+	\item Multinoulli $K$ sides, $n=1$: $\mx\ins\{0,1\}^{K}\ins\R^{K}$, $\sum_{k=1}^{K}x_{k}\eqs 1$ (\textbf{categorical} distribution/one-hot encoding),
+    \item Multinomial $K$ sides, $n$ tosses: $\mx\ins\{0,1,...,n\}^{K}\ins\R^{K}$, $\sum_{k=1}^{K}x_{k}\eqs n$,
+\end{itemize}
+
+\subsection{odds}
+
+Assume binary $y\ins\{0,1\}\defs\{\text{success},\text{failure}\}$,
+\begin{align*}
+	Y\sims p(\cdot|\mx,\mw)\eqs\text{Ber}(\cdot|\mu(\mx)),
+\end{align*}
+where $\mu(\mx)\defs p(Y=1|\mx)$, $p(Y=0|\mx)\eqs 1-\mu(\mx)$ and $0\leqs\mu(\mx)\leqs 1$
+
+\printbibliography
+
+
+\end{document}

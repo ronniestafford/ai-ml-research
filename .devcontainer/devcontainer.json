@@ -1,0 +1,52 @@
+{
+  "name": "devcontainer-reinforcement-learning",
+  "build": {
+    "dockerfile": "Dockerfile"
+  },
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "json.schemas": [
+          {
+            "fileMatch": [
+              "*/devcontainer-feature.json"
+            ],
+            "url": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainerFeature.schema.json"
+          }
+        ]
+      },
+      "extensions": [
+        "sst-dev.opencode",
+        "mads-hartmann.bash-ide-vscode",
+        "esbenp.prettier-vscode",
+        "hediet.vscode-drawio",
+        "james-yu.latex-workshop",
+        "streetsidesoftware.code-spell-checker-british-english",
+        "streetsidesoftware.code-spell-checker"
+      ]
+    }
+  },
+  "features": {
+    // "ghcr.io/ronniestafford/devcontainers/texlive:latest": {
+    //   "packages": "full"
+    // },
+    "ghcr.io/devcontainers/features/node:1": {
+      "version": "24",
+      "nodeGypDependencies": false
+    },
+    // "ghcr.io/ronniestafford/devcontainers/opencode:latest": {
+    //   "opencodeversion": "1.2.0"
+    // },
+    "ghcr.io/devcontainers/features/git:1": {}
+  },
+  "mounts": [
+    {
+      "source": "${localWorkspaceFolder}",
+      "target": "/workspace",
+      "type": "bind"
+    }
+  ],
+  "remoteUser": "texlive",
+  "containerUser": "root",
+  "updateContentCommand": "npm install -g @devcontainers/cli"
+}
