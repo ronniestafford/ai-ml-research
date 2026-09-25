@@ -39,9 +39,12 @@
 %\usepackage{bibentry} % Able to print entire bib entry in text
 % New BibLaTeX
 %\usepackage{csquotes}
-\usepackage[style=authoryear,maxnames=2,uniquelist=false]{biblatex}
-%\addbibresource{../../../PhD/Bibliography/library.bib}
 
+% These should be uncommented if bibliography is needed.
+% \addbibresource{../../../PhD/Bibliography/library.bib}
+% \usepackage[style=authoryear,maxnames=2,uniquelist=false]{biblatex}
+
+\usepackage[hybrid]{markdown}
 
 \usepackage{nomencl}
 % Multi columns
@@ -300,15 +303,15 @@
 \newcommand{\supu}[2]{{\underset{#1}\sup{[#2]}}}
 \newcommand{\limu}[2]{{\underset{#1}\lim{#2}}}
 \newcommand{\limsupu}[2]{{\underset{#1}\limsup{#2}}}
-\newcommand{\innerpu}[3]{{{\langle{#1},{#2}\rangle}_{#3}}} 
+\newcommand{\innerpu}[3]{{{\langle{#1},{#2}\rangle}_{#3}}}
 \newcommand{\innerp}[3]{{\langle{#1},{#2}\rangle_{#3}}}
-\newcommand{\biginnerp}[3]{{\big\langle{#1},{#2}\big\rangle_{#3}}} 
-\newcommand{\biginnerpu}[3]{{{\big\langle{#1},{#2}\big\rangle}_{#3}}} 
+\newcommand{\biginnerp}[3]{{\big\langle{#1},{#2}\big\rangle_{#3}}}
+\newcommand{\biginnerpu}[3]{{{\big\langle{#1},{#2}\big\rangle}_{#3}}}
 \newcommand{\from}{{\leftarrow}}
 \newcommand{\getss}{{\gets}}
 \newcommand{\subseteqs}{{\subseteq}}
 % Matrices
-\newcommand{\matr}[1]{\mathbf{#1}} 
+\newcommand{\matr}[1]{\mathbf{#1}}
 %Probabilty
 \newcommand{\Prb}{\text{Pr}}
 
@@ -354,9 +357,9 @@
 
 \makeatletter
 \newcommand{\multiline}[1]{%
-	\begin{tabularx}{\dimexpr\linewidth-\ALG@thistlm}[t]{@{}X@{}}
-		#1
-	\end{tabularx}
+  \begin{tabularx}{\dimexpr\linewidth-\ALG@thistlm}[t]{@{}X@{}}
+    #1
+  \end{tabularx}
 }
 \makeatother
 
@@ -410,9 +413,9 @@
 
 %% Fonts
 \newcommand{\timesFont}[1]{
-{\fontfamily{ptm}\selectfont
-{#1}
-}
+  {\fontfamily{ptm}\selectfont
+    {#1}
+  }
 }
 
 %Nomenclature spacing

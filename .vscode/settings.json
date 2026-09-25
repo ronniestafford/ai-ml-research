@@ -1,7 +1,6 @@
 {
   "latex-workshop.latex.recipe.default": "first",
   "latex-workshop.latex.outDir": "%DIR%/build",
-  "latex-workshop.latex.outputFile": "",
   "latex-workshop.latex.tools": [
     {
       "name": "xelatex",
@@ -9,7 +8,7 @@
       "args": [
         "-synctex=1",
         "--output-directory=%OUTDIR%",
-        "-jobname=ronnistafford-cv",
+        "-jobname=%DOCFILE%",
         "-interaction=nonstopmode",
         "-file-line-error",
         "%DOC%"
@@ -24,7 +23,8 @@
         "-file-line-error",
         "-xelatex",
         "-outdir=%OUTDIR%",
-        "-jobname=ronnistafford-cv",
+        "-jobname=%DOCFILE%",
+        "-shell-escape",
         "%DOC%"
       ]
     }
@@ -43,7 +43,9 @@
     "*": false
   },
   "cSpell.words": [
-    "RKHS"
+    "RKHS",
+    "Backpropagation",
+    "Backprop"
   ],
   "latex-workshop.formatting.latex": "latexindent",
   "[latex]": {
