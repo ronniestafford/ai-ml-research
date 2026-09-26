@@ -1,10 +1,35 @@
 \documentclass[11pt,a4paper]{report}
 
-\usepackage{shared/common}
+% \usepackage{shared/common}
 
-\usepackage{csquotes}
+% \usepackage{csquotes}
 % \addbibresource{library.bib}
 % \graphicspath{ {./images/} }
+
+\usepackage[
+  texMathDollars
+]{markdown}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+
+\providecommand{\mat}[1]{\mathbf{#1}}
+\providecommand{\vctr}[1]{\mathbf{#1}}
+\providecommand{\spaces}[1]{\mathcal{#1}}
+\providecommand{\numberSet}[1]{\mathbb{#1}}
+\providecommand{\smallSpacing}[1]{\,{#1}\,}
+\providecommand{\eqs}{\smallSpacing{=}}
+\providecommand{\defs}{{\,{:}{=}\,}}
+\providecommand{\pderiv}[2]{\frac{\partial #1}{\partial #2}}
+\providecommand{\from}{\smallSpacing{\leftarrow}}
+
+
+\usepackage{nicematrix}
+\usepackage{tikz}
+\usetikzlibrary{matrix}
+
+\setlength{\parindent}{0pt}
 
 % Margins
 \topmargin=-0.45in
@@ -21,18 +46,70 @@
 \begin{document}
 \maketitle
 
-\chapter{Neural Networks}
 
-
-\section{Backpropagation}
-
-\markdownInput{shared/backprop1.md}
+\markdownInput{shared/backprop.md}
 
 
 \subsection{Basic Concepts}
-input
+\[
+    \begin{bNiceMatrix}[margin]
+        \Block[fill=blue!10]{2-2}{A} &   & 0                           \\
+                                     &   & 0                           \\
+        0                            & 0 & \Block[fill=red!10]{1-1}{D}
+    \end{bNiceMatrix}
+\]
 
 
+
+\begin{tikzpicture}[
+        x={(1cm,0cm)},
+        y={(0cm,1cm)},
+        z={(0.55cm,0.32cm)}
+    ]
+
+    % Distance between slices
+    \def\zsep{4}
+
+    % Draw slices back-to-front
+    \foreach \k in {2,1,0} {
+
+            % Actual z-position
+            \pgfmathsetmacro{\z}{\k*\zsep}
+
+            % Opaque slice
+            \fill[white]
+            (0,0,\z) -- (3,0,\z)
+            -- (3,3,\z) -- (0,3,\z) -- cycle;
+
+            % Outer boundary
+            \draw[thick]
+            (0,0,\z) -- (3,0,\z)
+            -- (3,3,\z) -- (0,3,\z) -- cycle;
+
+            % Grid
+            \foreach \i in {1,2} {
+                    \draw (\i,0,\z) -- (\i,3,\z);
+                    \draw (0,\i,\z) -- (3,\i,\z);
+                }
+        }
+
+    % k-axis
+    \draw[->, thick]
+    (3.5,0,0) -- (3.5,0,2.4*\zsep)
+    node[right] {$k$};
+
+    % Slice labels
+    \foreach \k/\label in {
+            0/$k=1$,
+            1/$k=2$,
+            2/$k=3$
+        } {
+            \pgfmathsetmacro{\z}{\k*\zsep}
+            \node[anchor=west]
+            at (3.7,0,\z) {\label};
+        }
+
+\end{tikzpicture}
 
 
 % \printbibliography

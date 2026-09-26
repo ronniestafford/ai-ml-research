@@ -27,13 +27,22 @@
         "-shell-escape",
         "%DOC%"
       ]
-    }
+    },
+    {
+      "name": "pdftotext-default",
+      "command": "pdftotext",
+      "args": [
+        "%OUTDIR%/%DOCFILE%.pdf",
+        "%OUTDIR%/%DOCFILE%.default.txt"
+      ]
+    },
   ],
   "latex-workshop.latex.recipes": [
     {
       "name": "build-cv",
       "tools": [
-        "latexmk"
+        "latexmk",
+        "pdftotext-default"
       ]
     }
   ],
@@ -45,7 +54,14 @@
   "cSpell.words": [
     "RKHS",
     "Backpropagation",
-    "Backprop"
+    "Backprop",
+    "providecommand",
+    "mathbf",
+    "mathbb",
+    "mathcal",
+    "sigm",
+    "pmatrix",
+    "vctr"
   ],
   "latex-workshop.formatting.latex": "latexindent",
   "[latex]": {
