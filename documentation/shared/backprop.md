@@ -8,17 +8,20 @@ $$
 \providecommand{\defs}{{\,{:}{=}\,}}
 \providecommand{\pderiv}[2]{\frac{\partial #1}{\partial #2}}
 \providecommand{\from}{\smallSpacing{\leftarrow}}
+\providecommand{\ins}{\smallSpacing{\in}}
+
+
 $$
 
 # Backprop
 
 ## Chain Rule
 
-A deep neural network $F_{\Theta}:\spaces{X}\to\spaces{Y}$ is a composite function of $L$ layers, where each $l^{th}$ layer is itself a composition of a non-linear function $h^{l}(\cdot)$ and affine transformation $f_{\theta^{l}}^{l}(\cdot)$. The set of parameters for the entire deep network is $\Theta\defs(\theta^{L}, \cdots, \theta^{l}, \cdots \theta^{1})$ where $\theta^{l}$ parameterises $f^{l}$,
+A deep neural network $F_{\Theta}:\spaces{X}\to\spaces{Y}$ is a composite function of $L$ layers, where each $l^{th}$ layer is itself a composition of a non-linear function $h^{(l)}(\cdot)$ and affine transformation $f_{\theta^{(l)}}^{l}(\cdot)$. The set of parameters for the entire deep network is $\Theta\defs(\theta^{(L)}, \cdots, \theta^{l}, \cdots \theta^{(1)})$ where $\theta^{(l)}$ parameterises $f^{(l)}$,
 
 $$
 \begin{aligned}
-F_{\Theta}(x)\defs&(h^{L} \circ f^{L} \circ\cdots\circ h^{l} \circ f^{l} \circ\cdots\circ h^{1} \circ f^{1})(x),
+F_{\Theta}(x)\defs&(h^{(L)} \circ f^{(L)} \circ\cdots\circ h^{(l)} \circ f^{(l)} \circ\cdots\circ h^{(1)} \circ f^{(1)})(x),
 \end{aligned}
 $$
 
@@ -26,7 +29,7 @@ Then by the chain rule
 
 $$
 \begin{aligned}
-\pderiv{F_{\Theta}(x)}{\theta^{l}}\eqs&\left(\pderiv{h^{L}}{f^{L}}\pderiv{f^{L}}{h^{L-1}}  \cdots \pderiv{h^{l}}{f^{l}}\pderiv{f^{l}}{\theta^{l}}\right)(x),
+\pderiv{F_{\Theta}(x)}{\theta^{(l)}}\eqs&\left(\pderiv{h^{(L)}}{f^{(L)}}\pderiv{f^{(L)}}{h^{(L-1)}}  \cdots \pderiv{h^{(l)}}{f^{(l)}}\pderiv{f^{(l)}}{\theta^{(l)}}\right)(x),
 \end{aligned}
 $$
 
@@ -38,7 +41,7 @@ With a loss function $\spaces{L}:\spaces{Y}\to\numberSet{R}$, then the gradient 
 
 $$
 \begin{aligned}
-\theta^{l} &\from \theta^{l}-\eta\left(\pderiv{\spaces{L}}{F_{\Theta}}\pderiv{F_{\Theta}}{\theta^{l}}\right)(x),
+\theta^{(l)} &\from \theta^{(l)}-\eta\left(\pderiv{\spaces{L}}{F_{\Theta}}\pderiv{F_{\Theta}}{\theta^{(l)}}\right)(x),
 \end{aligned}
 $$
 
@@ -50,8 +53,8 @@ Let the affine transformation be
 
 $$
 \begin{aligned}
-\vctr{z}^{l}&=f(h^{l-1}),\\
-&=\mat{W}^{l}\vctr{h}^{l-1}+\vctr{b},
+\vctr{z}^{(l)}&=f(h^{(l-1)}),\\
+&=\mat{W}^{(l)}\vctr{h}^{(l-1)}+\vctr{b},
 \end{aligned}
 $$
 
@@ -59,17 +62,24 @@ and non-linearity be piecewise-linear
 
 $$
 \begin{aligned}
-\vctr{h}^{l}&=h(\vctr{z}^{l}),\\
-&=\operatorname{ReLU}(\vctr{z}^{l}),\\
-&=\max(0,\vctr{z}^{l}),\\
-&=\begin{cases}
-0, & x \leq 0,\\
-z^{l}, & z^{l} > 0.
-\end{cases},\\
+\vctr{h}^{(l)}&=h(\vctr{z}^{(l)}),\\
+&=\operatorname{ReLU}(\vctr{z}^{(l)}),\\
+&=\max(0,\vctr{z}^{(l)}),
 \end{aligned}
 $$
 
-where $\vctr{h}^{0}\in\spaces{X}$ and $\vctr{h}^{L}\in\spaces{Y}$.
+where the ReLU acts element-wise $\forall z \in \vctr{z}$,
+
+$$
+\begin{aligned}
+\operatorname{max}(0,z)&=\begin{cases}
+0, & z \leq 0\\
+z, & z > 0
+\end{cases},
+\end{aligned}
+$$
+
+with $\vctr{h}^{(0)}\ins\spaces{X}$, $\vctr{h}^{(L)}\ins\spaces{Y}$, $\mat{W}^{(l)}\ins\numberSet{R}^{m\times n}$, such that $f:\numberSet{R}^{n}\to\numberSet{R}^{m}$ and $h:\numberSet{R}^{m}\to\numberSet{R}^{m}$. Strictly each layer output dimension $m$ is arbitrarily chosen and $n$ equals the previous layer's $m$.
 
 $$
 \begin{aligned}
