@@ -9,8 +9,6 @@ $$
 \providecommand{\pderiv}[2]{\frac{\partial #1}{\partial #2}}
 \providecommand{\from}{\smallSpacing{\leftarrow}}
 \providecommand{\ins}{\smallSpacing{\in}}
-
-
 $$
 
 # Backprop
