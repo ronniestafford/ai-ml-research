@@ -16,9 +16,9 @@ $$
 \providecommand{\imp}{\Rightarrow}
 \providecommand{\ele}[1]{\mathrm{#1}}
 \providecommand{\twospace}{\space\space}
-\def\argmin{\operatorname{arg\,min}}
-\def\diag{\operatorname{diag}}
-\def\dim{\operatorname{dim}}
+\providecommand{\argmin}{\mathrm{arg\,min}}
+\providecommand{\diag}{\mathrm{diag}}
+\providecommand{\dim}{\mathrm{dim}}
 \providecommand{\argminu}[2]{{\underset{#1}\argmin{[#2]}}}
 \providecommand{\bigargminu}[2]{{\underset{#1}\argmin{\big[#2\big]}}}
 \providecommand{\biggargminu}[2]{{\underset{#1}\argmin{\bigg[#2\bigg]}}}
