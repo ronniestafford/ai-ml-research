@@ -111,7 +111,7 @@ and non-linearity (piecewise-linear)
 $$
 \begin{aligned}
 \vctr{h}^{(l)}&\eqs h(\vctr{g}^{(l)}),\\
-&\eqs\operatorname{ReLU}(\vctr{g}^{(l)}),\\
+&\eqs\mathrm{ReLU}(\vctr{g}^{(l)}),\\
 &\eqs\max(0,\vctr{g}^{(l)}),
 \end{aligned}
 $$
@@ -120,7 +120,7 @@ where the ReLU acts element-wise $\forall \mathrm{g} \in \vctr{g}$,
 
 $$
 \begin{aligned}
-\operatorname{max}(0,\mathrm{g})&\eqs\begin{cases}
+\mathrm{max}(0,\mathrm{g})&\eqs\begin{cases}
 0, & \mathrm{g} \leq 0\\
 \mathrm{g}, & \mathrm{g} > 0
 \end{cases},
