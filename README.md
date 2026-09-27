@@ -1,13 +1,15 @@
-# Reinforcement Learning
+# Machine Learning Research
 
-Reproducing my PhD research and exploring other algorithms.
+Reproducing some old results and experimenting with the new.
 
 ## Documentation
 
-[Shared markdown](documentation/shared/) is used by parent markdown docs and LaTex docs.
+- [Shared markdown](documentation/shared/) is used by parent markdown docs and LaTex docs.
 
-- [Fundamentals](documentation/fundamentals.md) such as backprop.
+### Deep Learning
 
-## PhD Research
+- [Backprop](documentation/shared/backprop.md)
 
-- In progress.
+## Revisiting my PhD thesis in Model-Based RL
+
+- In progress...
