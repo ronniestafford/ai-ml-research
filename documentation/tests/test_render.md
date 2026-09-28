@@ -5,32 +5,39 @@ File to test rendering: GitHub (MathJax), VSCode .md preview and Latex PDF.
 ## Characters
 
 ### Results
+
 mathcal (Cursive, Spaces)
+
 - GitHub: no (plain font), yes.
 - Preview: yes, yes.
 - Latex: yes, no (blank).
 
 mathscr (Cursive, Spaces)
+
 - GitHub: no (wrong font), yes.
 - Preview: yes, yes.
 - Latex: yes, no (blank).
 
 mathbf (Bold Vector and Matrices)
+
 - GitHub: no (plain font), yes.
 - Preview: yes, yes.
 - Latex: yes, no (blank).
 
 mathbb (Number Sets)
+
 - GitHub: no (wrong font), yes.
 - Preview: yes, yes.
 - Latex: yes, no (blank).
 
 text (Elements and Operators)
+
 - GitHub: yes, yes.
 - Preview: yes, yes.
 - Latex: yes, yes.
 
 mathrm (Elements and Operators)
+
 - GitHub: yes, yes.
 - Preview: yes, yes.
 - Latex: yes, yes.
@@ -45,7 +52,7 @@ Preview: yes, yes.
 
 Latex: yes, no (blank).
 
-$\mathcal{L}$, $𝓛$
+$ \mathcal{L} $, $𝓛$
 
 $\mathcal{X}$, $𝓧$
 
@@ -67,7 +74,7 @@ $\mathcal{R}_i$, $R_i$
 
 #### Block
 
-$$\mathcal{L}, 𝓛$$
+$$ \mathcal{L}, 𝓛 $$
 $$\mathcal{X}, 𝓧$$
 $$\mathcal{Y}, 𝒴$$
 $$\mathcal{F}, ℱ$$
