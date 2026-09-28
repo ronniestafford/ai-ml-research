@@ -1,0 +1,71 @@
+\documentclass[11pt,a4paper]{report}
+
+% \usepackage{shared/common}
+
+% \usepackage{csquotes}
+% \addbibresource{library.bib}
+% \graphicspath{ {./images/} }
+
+\usepackage[
+  texMathDollars
+]{markdown}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathrsfs}
+\usepackage{mathtools}
+
+% \providecommand{\mat}[1]{\mathbf{#1}}
+% \providecommand{\vctr}[1]{\mathbf{#1}}
+% \providecommand{\spaces}[1]{\mathcal{#1}}
+% \providecommand{\numberset}[1]{\mathbb{#1}}
+% \providecommand{\sml}[1]{\,{#1}\,}
+% \providecommand{\eqs}{\sml{=}}
+% \providecommand{\defs}{{\,{:}{=}\,}}
+% \providecommand{\mapdefs}{{\,{:}\,}}
+% \providecommand{\pderiv}[2]{\frac{\partial #1}{\partial #2}}
+% \providecommand{\from}{{\leftarrow}}
+% \providecommand{\tos}{{\to}}
+% \providecommand{\ins}{\sml{\in}}
+% \providecommand{\sims}{{\sim}}
+% \providecommand{\timess}{{\times}}
+% \providecommand{\imp}{\Rightarrow}
+% \providecommand{\ele}[1]{\mathrm{#1}}
+% \providecommand{\twospace}{\space\space}
+% \def\argmin{\operatorname{arg\,min}}
+% \def\diag{\operatorname{diag}}
+% \def\dim{\operatorname{dim}}
+% \providecommand{\argminu}[2]{{\underset{#1}\argmin{[#2]}}}
+% \providecommand{\bigargminu}[2]{{\underset{#1}\argmin{\big[#2\big]}}}
+% \providecommand{\biggargminu}[2]{{\underset{#1}\argmin{\bigg[#2\bigg]}}}
+
+
+\usepackage{nicematrix}
+\usepackage{tikz}
+\usetikzlibrary{matrix}
+
+\setlength{\parindent}{0pt}
+
+% Margins
+\topmargin=-0.45in
+\evensidemargin=0in
+\oddsidemargin=0in
+\textwidth=6.5in
+\textheight=9.5in
+\headsep=0.25in
+
+\title{Fundamentals}
+\author{Ronnie Stafford}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+
+\markdownInput{test_render.md}
+
+
+% \printbibliography
+
+
+\end{document}
