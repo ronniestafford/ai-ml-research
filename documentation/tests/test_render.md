@@ -4,13 +4,46 @@ File to test rendering: GitHub (MathJax), VSCode .md preview and Latex PDF.
 
 ## Characters
 
+### Results
+mathcal (Cursive, Spaces)
+- GitHub: no (plain font), yes.
+- Preview: yes, yes.
+- Latex: yes, no (blank).
+
+mathscr (Cursive, Spaces)
+- GitHub: no (wrong font), yes.
+- Preview: yes, yes.
+- Latex: yes, no (blank).
+
+mathbf (Bold Vector and Matrices)
+- GitHub: no (plain font), yes.
+- Preview: yes, yes.
+- Latex: yes, no (blank).
+
+mathbb (Number Sets)
+- GitHub: no (wrong font), yes.
+- Preview: yes, yes.
+- Latex: yes, no (blank).
+
+text (Elements and Operators)
+- GitHub: yes, yes.
+- Preview: yes, yes.
+- Latex: yes, yes.
+
+mathrm (Elements and Operators)
+- GitHub: yes, yes.
+- Preview: yes, yes.
+- Latex: yes, yes.
+
 ### mathcal (Cursive, Spaces)
 
 #### Inline
 
 GitHub: no (plain font), yes.
-Preview: yes, yes
-Latex: yes, no (blank)
+
+Preview: yes, yes.
+
+Latex: yes, no (blank).
 
 $\mathcal{L}$, $𝓛$
 
@@ -50,7 +83,7 @@ $$\mathcal{R}_i, R_i$$
 
 #### Inline
 
-GitHub: yes, no (blank).
+GitHub: no (wrong font), yes.
 
 Preview: yes, yes.
 
@@ -93,8 +126,10 @@ $$\mathscr{R}_i, R_i$$
 ### mathbf (Bold Vector and Matrices)
 
 GitHub: no (plain font), yes.
-Preview: yes, yes
-Latex: yes, no (blank)
+
+Preview: yes, yes.
+
+Latex: yes, no (blank).
 
 #### Inline
 
@@ -123,7 +158,9 @@ $$\mathbf{f}_i, 𝐟_i$$
 ### text (Elements and Operators)
 
 GitHub: yes, yes.
+
 Preview: yes, yes.
+
 Latex: yes, yes.
 
 #### Inline
@@ -153,7 +190,9 @@ $$\text{f}_i, f_i$$
 ### mathbb (Number Sets)
 
 GitHub: no (wrong font), yes.
+
 Preview: yes, yes.
+
 Latex: yes, no (blank).
 
 #### Inline
@@ -177,7 +216,9 @@ $$\mathbb{R}_i, ℝ_i$$
 ### mathrm (Elements and Operators)
 
 GitHub: yes, yes.
+
 Preview: yes, yes.
+
 Latex: yes, yes.
 
 #### Inline
