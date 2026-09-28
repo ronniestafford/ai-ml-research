@@ -26,8 +26,8 @@ Assume a joint distribution $P_{X,Y}$ over the input space $𝓧$, output space 
 
 $$
 \begin{aligned}
-f^{*}&=\underset{f\inℱ}{\mathrm{argmin}}\left[R(f)\right],\\
-&=\underset{f\inℱ}{\mathrm{argmin}} \bigg[ 𝔼_{P_{X,Y}}\left[ 𝓛(f,X,Y) \right] \bigg].
+f^{*}&=\underset{f\in ℱ}{\mathrm{argmin}}\left[R(f)\right],\\
+&=\underset{f\in ℱ}{\mathrm{argmin}} \bigg[ 𝔼_{P_{X,Y}}\left[ 𝓛(f,X,Y) \right] \bigg].
 \end{aligned}
 $$
 
@@ -40,7 +40,7 @@ $f{{:}}𝓧{\to}𝒴$ and loss function is chosen as $𝓛{{:}}𝒴{\times}𝒴{
 
 $$
 \begin{aligned}
-f^{*}&=\underset{f\inℱ}{\mathrm{argmin}}{ \bigg[𝔼_{P_{X}} 𝔼_{P_{Y|X}}\left[  𝓛(f(X),Y) \right] \bigg] }.
+f^{*}&=\underset{f\in ℱ}{\mathrm{argmin}}{ \bigg[𝔼_{P_{X}} 𝔼_{P_{Y|X}}\left[  𝓛(f(X),Y) \right] \bigg] }.
 \end{aligned}
 $$
 
@@ -50,8 +50,8 @@ Empirical risk $\hat{R}$ minimisation requires a finite sample data set $\lbrace
 
 $$
 \begin{aligned}
-f^{*}&=\underset{f\inℱ}{\mathrm{argmin}}{ \bigg[ 𝔼_{P_{Y|X}} \left[  𝓛(f(X),Y) \right] \bigg] },\\
-&=\underset{f\inℱ}{\mathrm{argmin}}{\bigg[\frac{1}{D}\sum_{d= 1}^{D}𝓛(f(x_{d}),y_{d})\bigg]}.
+f^{*}&=\underset{f\in ℱ}{\mathrm{argmin}}{ \bigg[ 𝔼_{P_{Y|X}} \left[  𝓛(f(X),Y) \right] \bigg] },\\
+&=\underset{f\in ℱ}{\mathrm{argmin}}{\bigg[\frac{1}{D}\sum_{d= 1}^{D}𝓛(f(x_{d}),y_{d})\bigg]}.
 \end{aligned}
 $$
 
@@ -77,7 +77,7 @@ where each partial derivative is evaluated after $𝐱$ is propagated in a forwa
 
 ## Gradient Descent
 
-The gradient update rule for layer $l$ at a particular $x_{d}\in𝓧$ is
+The gradient update rule for layer $l$ at a particular $x_{d}\in 𝓧$ is
 
 $$
 \begin{aligned}
@@ -91,7 +91,7 @@ where $\eta>0$ is the learning rate. The process of making a forward pass of $x_
 
 ### Matrix \& Vector Notation
 
-Let vectors $𝐱\in𝓧$, $\mathbf{y}\in𝒴$, then the neural network $f_{\Theta}$ consist of the affine transformation
+Let vectors $𝐱\in 𝓧$, $\mathbf{y}\in 𝒴$, then the neural network $f_{\Theta}$ consist of the affine transformation
 
 $$
 \begin{aligned}
@@ -121,7 +121,7 @@ $$
 \end{aligned}
 $$
 
-with $𝐡^{(0)}=𝐱\in𝓧$, $𝐡^{(L)}=\mathbf{y}\in𝒴$, $𝐖^{(l)}\inℝ^{m{\times} n}$, such that $g{{:}}ℝ^{n}{\to}ℝ^{m}$, $h{{:}}ℝ^{m}{\to}ℝ^{m}$. Note that $𝐠^{(l)}$ and $𝐡^{(l)}$ are calculated by propagating $𝐱$ forward through the network. Strictly each layer output dimension $m$ is arbitrarily chosen and $n$ equals the previous layer's $m$.
+with $𝐡^{(0)}=𝐱\in 𝓧$, $𝐡^{(L)}=\mathbf{y}\in 𝒴$, $𝐖^{(l)}\in ℝ^{m{\times} n}$, such that $g{{:}}ℝ^{n}{\to}ℝ^{m}$, $h{{:}}ℝ^{m}{\to}ℝ^{m}$. Note that $𝐠^{(l)}$ and $𝐡^{(l)}$ are calculated by propagating $𝐱$ forward through the network. Strictly each layer output dimension $m$ is arbitrarily chosen and $n$ equals the previous layer's $m$.
 
 ### Partial Derivative Tensors
 
@@ -141,8 +141,6 @@ $$
 
 Temporarily dropping the layer index and introducing tensor indexes $ijk$, vector elements $\text{g}_k \in 𝐠$, $\text{h}_j \in 𝐡$, $\text{w} \in 𝐖$ and $\text{b}_k \in 𝐛$, then the affine transformation is
 
-
-
 $$
 \begin{aligned}
 \text{g}_{k} &= \sum_{j}\text{w}_{kj}\text{h}_{j} + b_{k}.
@@ -154,7 +152,7 @@ This leads to the partial derivative w.r.t weights
 $$
 \begin{aligned}
 \frac{\partial \text{g}_{k}}{\partial w_{i,j}} &= \text{h}_{j}\delta_{ik},\\
-\Rightarrow \frac{\partial \text{g}_{k}}{\partial 𝐖} &= \mathbf{e}_{k}𝐡^{\top}\space\space\inℝ^{m\times n},
+\Rightarrow \frac{\partial \text{g}_{k}}{\partial 𝐖} &= \mathbf{e}_{k}𝐡^{\top}\space\space\in ℝ^{m\times n},
 \end{aligned}
 $$
 
@@ -163,7 +161,7 @@ where the standard $k^{th}$ basis vector is $\mathbf{e}_{k}$, the partial deriva
 $$
 \begin{aligned}
 \frac{\partial \text{g}_{k}}{\partial h_{j}} &= \text{w}_{kj},\\
-\Rightarrow \frac{\partial 𝐠}{\partial 𝐡} &= 𝐖\space\space\inℝ^{m\times n},
+\Rightarrow \frac{\partial 𝐠}{\partial 𝐡} &= 𝐖\space\space\in ℝ^{m\times n},
 \end{aligned}
 $$
 
@@ -172,7 +170,7 @@ partial derivative w.r.t intercept
 $$
 \begin{aligned}
 \frac{\partial \text{g}_{k}}{\partial b_{i}} &= \delta_{ki},\\
-\Rightarrow \frac{\partial 𝐠}{\partial 𝐛} &= \mathbf{I}_{m}\space\space\inℝ^{m\times m},
+\Rightarrow \frac{\partial 𝐠}{\partial 𝐛} &= \mathbf{I}_{m}\space\space\in ℝ^{m\times m},
 \end{aligned}
 $$
 
@@ -181,7 +179,7 @@ and partial derivative of the piecewise linear function is,
 $$
 \begin{aligned}
 \frac{\partial \text{h}_{j}}{\partial g_{k}} &= \delta_{jk}1_{\text{g}_{k}>0},\\
-\Rightarrow \frac{\partial 𝐡}{\partial 𝐠} &= \mathrm{diag}(\mathbf{1}_{\text{g}>0})\space\space\inℝ^{m\times m}.
+\Rightarrow \frac{\partial 𝐡}{\partial 𝐠} &= \mathrm{diag}(\mathbf{1}_{\text{g}>0})\space\space\in ℝ^{m\times m}.
 \end{aligned}
 $$
 
@@ -193,7 +191,7 @@ $$
 &=
 \frac{1}{2}{(𝐟_{d}-\mathbf{y}_{d})}^{\top}(𝐟_{d}-\mathbf{y}_{d}),\\
 &= \frac{1}{2}𝐟_{d}^{\top}𝐟_{d}-2\mathbf{y}_{d}^{\top}𝐟_{d}+\mathbf{y}_{d}^{\top}\mathbf{y}_{d},\\
-\Rightarrow \frac{\partial 𝓛_{d}}{\partial 𝐟_{d}}&=𝐟_{d}^{\top}-\mathbf{y}_{d}^{\top}\space\space\inℝ^{1\times\mathrm{dim}({𝒴})}.
+\Rightarrow \frac{\partial 𝓛_{d}}{\partial 𝐟_{d}}&=𝐟_{d}^{\top}-\mathbf{y}_{d}^{\top}\space\space\in ℝ^{1\times\mathrm{dim}({𝒴})}.
 \end{aligned}
 $$
 
@@ -204,6 +202,6 @@ For each sample $(𝐱_{d},\mathbf{y}_d)$, the network and loss function are eva
 $$
 \begin{aligned}
 \frac{\partial 𝓛}{\partial 𝐖^{(l)}}&=\frac{\partial 𝓛}{\partial 𝐠^{(l)}}\frac{\partial 𝐠^{(l)}}{\partial 𝐖^{(l)}},\\
-&=\sum_{k}\frac{\partial 𝓛}{\partial \text{g}_{k}^{(l)}}\frac{\partial \text{g}_{k}^{(l)}}{\partial 𝐖^{(l)}}\space\space\inℝ^{m{\times} n}.
+&=\sum_{k}\frac{\partial 𝓛}{\partial \text{g}_{k}^{(l)}}\frac{\partial \text{g}_{k}^{(l)}}{\partial 𝐖^{(l)}}\space\space\in ℝ^{m{\times} n}.
 \end{aligned}
 $$
