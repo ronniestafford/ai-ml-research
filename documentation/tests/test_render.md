@@ -52,7 +52,7 @@ Preview: yes, yes.
 
 Latex: yes, no (blank).
 
-$ \mathcal{L} $, $𝓛$
+$\mathcal{L}$, $𝓛$
 
 $\mathcal{X}$, $𝓧$
 
@@ -251,3 +251,31 @@ $$\mathrm{f}, f$$
 $$\mathrm{h}_i, h_i$$
 $$\mathrm{W}_i, W_i$$
 $$\mathrm{f}_i, f_i$$
+
+
+### Math test
+
+Inline:
+
+$\mathbb{R}$
+
+Block:
+
+$$
+\mathbb{R}
+$$
+
+Math block:
+
+```math
+\mathbb{R}
+```
+
+Other fonts:
+
+$$
+\mathbf{R}\quad
+\mathcal{R}\quad
+\mathscr{R}\quad
+\mathfrak{R}
+$$
