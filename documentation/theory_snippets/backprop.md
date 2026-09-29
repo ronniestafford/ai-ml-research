@@ -65,7 +65,7 @@ $$
 \end{aligned}
 $$
 
-where $\eta>0$ is the learning rate. The process of making a forward pass of $x_{d}$ through the entire network, calculating the loss function $\mathcal{L}_d$ with the target $y_{d} \in \mathcal{Y}$, then calculating the partial derivative tensors in a backwards pass is known as **backpropagation**. Usually each parameter update is made with a gradient calculated for a minibatch size $M{\ll} D$ sampled from the training set.
+where $\eta>0$ is the learning rate. The process of making a forward pass of $x_{d}$ through the entire network, calculating the loss function $\mathcal{L}_d$ with the target $y_d\in\mathcal{Y}$, then calculating the partial derivative tensors in a backwards pass is known as **backpropagation**. Usually each parameter update is made with a gradient calculated for a minibatch size $M{\ll} D$ sampled from the training set.
 
 ## Concrete Example
 
@@ -163,7 +163,7 @@ $$
 \end{aligned}
 $$
 
-If the loss function is a squared loss and the output of the neural network after a forward pass is $f_{\Theta}(\mathbf{x}_{d})=\mathbf{h}^{(L)}=\mathbf{f}_{d}$, then the empirical risk minimisation objective for a sample $(\mathbf{x}_{d},\mathbf{y}_d)$ is,
+If the loss function is a squared loss and the output of the neural network after a forward pass is $f_{\Theta}(\mathbf{x}_d)=\mathbf{h}^{(L)}=\mathbf{f}_d$, then the empirical risk minimisation objective for a sample $(\mathbf{x}_d,\mathbf{y}_d)$ is,
 
 $$
 \begin{aligned}
@@ -177,7 +177,7 @@ $$
 
 ### Putting it all Together
 
-For each sample $(\mathbf{x}_{d},\mathbf{y}_d)$, the network and loss function are evaluated in a forward pass. All of the partial derivative tensors are then calculated and multiplied together to get the weight updates. Each weight update is evaluated for a minibatch in stochastic gradient descent. All of the tensors are two-dimension, apart from the three-dimensional weight partial derivative, $\frac{\partial \mathbf{g}}{\partial \mathbf{W}}$. In this case, the matrix-tensor multiplication operates along the tensor's third dimension ($k$-index),
+For each sample $(\mathbf{x}_d,\mathbf{y}_d)$, the network and loss function are evaluated in a forward pass. All of the partial derivative tensors are then calculated and multiplied together to get the weight updates. Each weight update is evaluated for a minibatch in stochastic gradient descent. All of the tensors are two-dimension, apart from the three-dimensional weight partial derivative, $\frac{\partial \mathbf{g}}{\partial \mathbf{W}}$. In this case, the matrix-tensor multiplication operates along the tensor's third dimension ($k$-index),
 
 $$
 \begin{aligned}
