@@ -24,7 +24,7 @@ f^{*}&=\underset{f\in \mathcal{F}}{\mathrm{argmin}}{ \bigg[\mathbb{E}_{P_{X}} \m
 \end{aligned}
 $$
 
-This is the standard supervised learning problem where $P_{X}$ is the data generator distribution and $f$ is modelling some aspect of the conditional distribution. The aspect of $P_{Y|X}$ that is modelled is determined by the choice of loss function e.g. squared loss determines that $f^{*}$ models the conditional mean $\mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y]$ under the conditional distribution, similarly cross-entropy targets the conditional distribution $P(Y|X=x)$ itself etc.
+This is the standard supervised learning problem where $P_{X}$ is the data generator distribution and $f$ is modelling some aspect of the conditional distribution. The aspect of $P_{Y|X}$ that is modelled is determined by the choice of loss function e.g. squared loss determines that $f^{*}$ models the conditional mean $\mu_{Y|X=x} \coloneqq \mathbb{E}_{Y|X=x}[Y]$ under the conditional distribution, similarly cross-entropy targets the conditional distribution $P(Y|X=x)$ itself etc.
 
 Empirical risk $\hat{R}$ minimisation requires a finite sample data set $\lbrace(x_{d},y_{d})\rbrace_{d=1}^{D} \overset{\mathrm{i.i.d.}}{\sim} P_{X,Y}$, such that
 
@@ -65,7 +65,7 @@ $$
 \end{aligned}
 $$
 
-where $\eta>0$ is the learning rate. The process of making a forward pass of $x_{d}$ through the entire network, calculating the loss function $\mathcal{L}_{d}$ with the target $y_{d} \in \mathcal{Y}$, then calculating the partial derivative tensors in a backwards pass is known as **backpropagation**. Usually each parameter update is made with a gradient calculated for a minibatch size $M{\ll} D$ sampled from the training set.
+where $\eta>0$ is the learning rate. The process of making a forward pass of $x_{d}$ through the entire network, calculating the loss function $\mathcal{L}_d$ with the target $y_{d} \in \mathcal{Y}$, then calculating the partial derivative tensors in a backwards pass is known as **backpropagation**. Usually each parameter update is made with a gradient calculated for a minibatch size $M{\ll} D$ sampled from the training set.
 
 ## Concrete Example
 
