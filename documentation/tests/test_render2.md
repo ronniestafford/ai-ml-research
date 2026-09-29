@@ -18,7 +18,11 @@ $\mathtt{R}$
 
 ## Equations
 $\mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y]$
-$\mu_{Y|X= x} \coloneqq \mathbb{E}_{P_{Y|X= x}}[Y]$
 
+$\mu_{Y|X=x}$
+
+$\mu_{Y|}$
+
+$\mu_{Y}$
 
 $$ \mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y] $$
