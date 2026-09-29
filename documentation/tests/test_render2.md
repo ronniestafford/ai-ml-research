@@ -19,6 +19,10 @@ $\mathtt{R}$
 ## Equations
 $\mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y]$
 
+$\mu_{Y|X=x}\coloneqq\mathbb{E}_{P_{1}}$
+
+$\mu_{Y|X=x}\coloneqq\mathbb{E}_{Y|X=x}$
+
 $\mu_{Y|X=x} \coloneqq \mathbb{E}_{Y|X=x}$
 
 $\mu_{Y|X=x} \coloneqq \mathbb{E}_{P1}$
