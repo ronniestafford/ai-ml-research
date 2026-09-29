@@ -1,0 +1,55 @@
+## Fonts
+
+$\mathbb{R}$
+
+$\mathbf{R}$
+
+$\mathcal{R}$
+
+$\mathscr{R}$
+
+$\mathfrak{R}$
+
+$\mathrm{R}$
+
+$\mathsf{R}$
+
+$\mathtt{R}$
+
+## Nested Subscripts
+
+${E}_{P_{Y}}[Y]$
+
+${E}_{P_Y}[Y]$
+
+
+$$ \mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y] $$
+
+## Subscripts
+
+$f_{\Theta}(\mathbf{x}_{d})=\mathbf{h}^{(L)}=\mathbf{f}_{d}$
+
+$f_{\Theta}(\mathbf{x}_d)=\mathbf{h}^{(L)}=\mathbf{f}_d$
+
+$f_{\Theta}(\mathbf{x}_d)=\mathbf{h}^{L}=\mathbf{f}_d$
+
+$f_{\Theta}(\mathbf{x}_d)=\mathbf{h}^L=\mathbf{f}_d$
+
+$f_{\Theta}(\mathbf{x})=\mathbf{h}=\mathbf{f}$
+
+
+$$f_{\Theta}(\mathbf{x}_{d})=\mathbf{h}^{(L)}=\mathbf{f}_{d}$$
+
+## Other
+
+$\mathcal{L}_d$ with the target $y_{d} \in \mathcal{Y}$
+
+$\mathcal{L}_d$ with the target $y_{d}\in\mathcal{Y}$
+
+$\mathcal{L}_d$ with the target $y_d\in\mathcal{Y}$
+
+$\mathcal{L}$ with the target $y_d\in\mathcal{Y}$
+
+$\mathcal{L}$ with the target $y\in\mathcal{Y}$
+
+$\mathcal{L}$ with the target
