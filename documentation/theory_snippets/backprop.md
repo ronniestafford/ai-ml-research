@@ -1,23 +1,3 @@
-<!-- \providecommand{\mat}[1]{\mathbf{#1}}
-\providecommand{\vctr}[1]{\mathbf{#1}}
-\providecommand{\spaces}[1]{\mathcal{#1}}
-\providecommand{\numberset}[1]{\mathbb{#1}}
-\providecommand{\sml}[1]{{#1}}
-\providecommand{\ele}[1]{\mathrm{#1}}
-\providecommand{\mapdefs}{{{:}}}
-\providecommand{\from}{{\leftarrow}}
-\providecommand{\tos}{{\to}}
-\providecommand{\ins}{\in}
-\providecommand{\sims}{{\sim}}
-\providecommand{\timess}{{\times}}
-\providecommand{\imp}{\Rightarrow}
-\providecommand{\twospace}{\space\space}
-\providecommand{\argmin}{\mathrm{argmin}}
-\providecommand{\pderiv}[2]{\frac{\partial #1}{\partial #2}}
-\providecommand{\argminu}[2]{{\underset{#1}\argmin{[#2]}}}
-\providecommand{\bigargminu}[2]{{\underset{#1}\argmin{\big[#2\big]}}}
-\providecommand{\biggargminu}[2]{{\underset{#1}\argmin{\bigg[#2\bigg]}}} -->
-
 # Backprop
 
 ## Risk Minimisation
