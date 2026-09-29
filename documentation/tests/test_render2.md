@@ -16,17 +16,10 @@ $\mathsf{R}$
 
 $\mathtt{R}$
 
-## Equations
-$\mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y]$
+## Nested Subscripts
+${E}_{P_{Y}}[Y]$
 
-$\mu_{Y|X=x}\coloneqq\mathbb{E}_{P_{1}}$
+${E}_{P_Y}[Y]$
 
-$\mu_{Y|X=x}\coloneqq\mathbb{E}_{\!P_{1}}$
-
-$\mu_{Y|X=x}\coloneqq\mathbb{E}_{\!P_1}$
-
-$\mu_{Y|X=x}\coloneqq\mathbb{E}_{P_1}$
-
-\(\mu_{Y|X=x}\coloneqq\mathbb{E}_{P_{1}}\)
 
 $$ \mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y] $$
