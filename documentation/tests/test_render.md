@@ -6,254 +6,229 @@ File to test rendering: GitHub (MathJax), VSCode .md preview and Latex PDF.
 
 ### Results
 
+TLDR: Latex has trouble rendering unicode, Chrome MacOS has trouble rendering Github .md files. Chrome is being presented with the correct html  
+
 mathcal (Cursive, Spaces)
 
-- GitHub: no (plain font), yes.
-- Preview: yes, yes.
-- Latex: yes, no (blank).
+- GitHub: no (Chrome MacOS) yes (safari).
+- Preview: yes.
+- Latex: yes.
 
 mathscr (Cursive, Spaces)
 
-- GitHub: no (wrong font), yes.
-- Preview: yes, yes.
-- Latex: yes, no (blank).
+- GitHub: no (Chrome MacOS) yes (safari).
+- Preview: yes.
+- Latex: yes.
 
 mathbf (Bold Vector and Matrices)
 
-- GitHub: no (plain font), yes.
-- Preview: yes, yes.
-- Latex: yes, no (blank).
+- GitHub: no (Chrome MacOS) yes (safari).
+- Preview: yes.
+- Latex: yes.
 
 mathbb (Number Sets)
 
-- GitHub: no (wrong font), yes.
-- Preview: yes, yes.
-- Latex: yes, no (blank).
+- GitHub: no (Chrome MacOS) yes (safari).
+- Preview: yes.
+- Latex: yes.
 
 text (Elements and Operators)
 
-- GitHub: yes, yes.
-- Preview: yes, yes.
-- Latex: yes, yes.
+- GitHub: yes.
+- Preview: yes.
+- Latex: yes.
 
 mathrm (Elements and Operators)
 
-- GitHub: yes, yes.
-- Preview: yes, yes.
-- Latex: yes, yes.
+- GitHub: yes.
+- Preview: yes.
+- Latex: yes.
 
 ### mathcal (Cursive, Spaces)
 
 #### Inline
 
-GitHub: no (plain font), yes.
+$\mathcal{L}$,
 
-Preview: yes, yes.
+$\mathcal{X}$, 
 
-Latex: yes, no (blank).
+$\mathcal{Y}$, 
 
-$\mathcal{L}$, $𝓛$
+$\mathcal{F}$, 
 
-$\mathcal{X}$, $𝓧$
+$\mathcal{R}$, 
 
-$\mathcal{Y}$, $𝒴$
+$\mathcal{L}_i$,
 
-$\mathcal{F}$, $ℱ$
+$\mathcal{X}_i$,
 
-$\mathcal{R}$, $R$
+$\mathcal{Y}_i$,
 
-$\mathcal{L}_i$, $𝓛_i$
+$\mathcal{F}_i$
 
-$\mathcal{X}_i$, $𝓧_i$
-
-$\mathcal{Y}_i$, $𝒴_i$
-
-$\mathcal{F}_i$, $ℱ_i$
-
-$\mathcal{R}_i$, $R_i$
+$\mathcal{R}_i$
 
 #### Block
 
-$$ \mathcal{L}, 𝓛 $$
-$$\mathcal{X}, 𝓧$$
-$$\mathcal{Y}, 𝒴$$
-$$\mathcal{F}, ℱ$$
-$$\mathcal{R}, R$$
+$$ \mathcal{L}$$
+$$\mathcal{X}$$
+$$\mathcal{Y}$$
+$$\mathcal{F}$$
+$$\mathcal{R}$$
 
-$$\mathcal{L}_i, 𝓛_i$$
-$$\mathcal{X}_i, 𝓧_i$$
-$$\mathcal{Y}_i, 𝒴_i$$
-$$\mathcal{F}_i, ℱ_i$$
-$$\mathcal{R}_i, R_i$$
+$$\mathcal{L}_i$$
+$$\mathcal{X}_i$$
+$$\mathcal{Y}_i$$
+$$\mathcal{F}_i$$
+$$\mathcal{R}_i$$
 
 ### mathscr (Cursive, Spaces)
 
 #### Inline
 
-GitHub: no (wrong font), yes.
+$\mathscr{L}$
 
-Preview: yes, yes.
+$\mathscr{X}$
 
-Latex: yes, no (blank).
+$\mathscr{Y}$
 
-$\mathscr{L}$, $𝓛$
+$\mathscr{F}$
 
-$\mathscr{X}$, $𝓧$
+$\mathscr{R}$
 
-$\mathscr{Y}$, $𝒴$
+$\mathscr{L}_i$
 
-$\mathscr{F}$, $ℱ$
+$\mathscr{X}_i$
 
-$\mathscr{R}$, $R$
+$\mathscr{Y}_i$
 
-$\mathscr{L}_i$, $𝓛_i$
+$\mathscr{F}_i$
 
-$\mathscr{X}_i$, $𝓧_i$
-
-$\mathscr{Y}_i$, $𝒴_i$
-
-$\mathscr{F}_i$, $ℱ_i$
-
-$\mathscr{R}_i$, $R_i$
+$\mathscr{R}_i$
 
 #### Block
 
-$$\mathscr{L}, 𝓛$$
-$$\mathscr{X}, 𝓧$$
-$$\mathscr{Y}, 𝒴$$
-$$\mathscr{F}, ℱ$$
-$$\mathscr{R}, R$$
+$$\mathscr{L}$$
+$$\mathscr{X}$$
+$$\mathscr{Y}$$
+$$\mathscr{F}$$
+$$\mathscr{R}$$
 
-$$\mathscr{L}_i, 𝓛_i$$
-$$\mathscr{X}_i, 𝓧_i$$
-$$\mathscr{Y}_i, 𝒴_i$$
-$$\mathscr{F}_i, ℱ_i$$
-$$\mathscr{R}_i, R_i$$
+$$\mathscr{L}_i$$
+$$\mathscr{X}_i$$
+$$\mathscr{Y}_i$$
+$$\mathscr{F}_i$$
+$$\mathscr{R}_i$$
 
 ### mathbf (Bold Vector and Matrices)
-
-GitHub: no (plain font), yes.
-
-Preview: yes, yes.
-
-Latex: yes, no (blank).
-
 #### Inline
 
-$\mathbf{h}$, $𝐡$
+$\mathbf{h}$, 
 
-$\mathbf{W}$, $𝐖$
+$\mathbf{W}$, 
 
-$\mathbf{f}$, $𝐟$
+$\mathbf{f}$,
 
-$\mathbf{h}_i$, $𝐡_i$
+$\mathbf{h}_i$
 
-$\mathbf{W}_i$, $𝐖_i$
+$\mathbf{W}_i$
 
-$\mathbf{f}_i$, $𝐟_i$
+$\mathbf{f}_i$
 
 #### Block
 
-$$\mathbf{h}, 𝐡$$
-$$\mathbf{W}, 𝐖$$
-$$\mathbf{f}, 𝐟$$
+$$\mathbf{h}$$
+$$\mathbf{W}$$
+$$\mathbf{f}$$
 
-$$\mathbf{h}_i, 𝐡_i$$
-$$\mathbf{W}_i, 𝐖_i$$
-$$\mathbf{f}_i, 𝐟_i$$
+$$\mathbf{h}_i$$
+$$\mathbf{W}_i$$
+$$\mathbf{f}_i$$
 
 ### text (Elements and Operators)
 
-GitHub: yes, yes.
-
-Preview: yes, yes.
-
-Latex: yes, yes.
-
 #### Inline
 
-$\text{h}$, $h$
+$\text{h}$,
 
-$\text{W}$, $W$
+$\text{W}$,
 
-$\text{f}$, $f$
+$\text{f}$,
 
-$\text{h}_i$, $h_i$
+$\text{h}_i$,
 
-$\text{W}_i$, $W_i$
+$\text{W}_i$,
 
-$\text{f}_i$, $f_i$
+$\text{f}_i$,
 
 #### Block
 
-$$\text{h}, h$$
-$$\text{W}, W$$
-$$\text{f}, f$$
+$$\text{h}$$
+$$\text{W}$$
+$$\text{f}$$
 
-$$\text{h}_i, h_i$$
-$$\text{W}_i, W_i$$
-$$\text{f}_i, f_i$$
+$$\text{h}_i$$
+$$\text{W}_i$$
+$$\text{f}_i$$
 
 ### mathbb (Number Sets)
 
-GitHub: no (wrong font), yes.
-
-Preview: yes, yes.
-
-Latex: yes, no (blank).
-
 #### Inline
 
-$\mathbb{E}$, $𝔼$
+$\mathbb{E}$, 
 
-$\mathbb{R}$, $ℝ$
+$\mathbb{R}$, 
 
-$\mathbb{E}_i$, $𝔼_i$
+$\mathbb{E}_i$
 
-$\mathbb{R}_i$, $ℝ_i$
+$\mathbb{R}_i$
 
 #### Block
 
-$$\mathbb{E}, 𝔼$$
-$$\mathbb{R}, ℝ$$
+$$\mathbb{E}$$
+$$\mathbb{R}$$
 
-$$\mathbb{E}_i, 𝔼_i$$
-$$\mathbb{R}_i, ℝ_i$$
+$$\mathbb{E}_i$$
+$$\mathbb{R}_i$$
 
 ### mathrm (Elements and Operators)
 
-GitHub: yes, yes.
-
-Preview: yes, yes.
-
-Latex: yes, yes.
-
 #### Inline
 
-$\mathrm{h}$, $h$
+$\mathrm{h}$,
 
-$\mathrm{W}$, $W$
+$\mathrm{W}$,
 
-$\mathrm{f}$, $f$
+$\mathrm{f}$,
 
-$\mathrm{h}_i$, $h_i$
+$\mathrm{h}_i$,
 
-$\mathrm{W}_i$, $W_i$
+$\mathrm{W}_i$,
 
-$\mathrm{f}_i$, $f_i$
+$\mathrm{f}_i$,
 
 #### Block
 
-$$\mathrm{h}, h$$
-$$\mathrm{W}, W$$
-$$\mathrm{f}, f$$
+$$\mathrm{h}$$
+$$\mathrm{W}$$
+$$\mathrm{f}$$
 
-$$\mathrm{h}_i, h_i$$
-$$\mathrm{W}_i, W_i$$
-$$\mathrm{f}_i, f_i$$
+$$\mathrm{h}_i$$
+$$\mathrm{W}_i$$
+$$\mathrm{f}_i$$
 
+### Unicode
+#### Inline
+ $𝓛$, $𝓧$, $𝒴$, $ℱ$, $R$
+ 
+ $𝐡$, $𝐖$, $𝐟$
+ 
+ $𝔼$, $ℝ$
 
-### Math test
+ #### Block
+ $$𝓛, 𝓧, 𝒴, ℱ, R, 𝐡, 𝐖, 𝐟, 𝔼, ℝ$$
+
+### Math blocks test
 
 Inline:
 
