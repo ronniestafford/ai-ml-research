@@ -2,7 +2,7 @@
   "name": "devcontainer-ai-ml-research-python",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "ai-ml-research-python",
-  "workspaceFolder": "/workspace/src-python",
+  "workspaceFolder": "/workspace",
   "postCreateCommand": "uv sync",
   "customizations": {
     "vscode": {
