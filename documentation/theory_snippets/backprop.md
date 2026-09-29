@@ -177,7 +177,7 @@ $$
 
 ### Putting it all Together
 
-For each sample $(\mathbf{x}_d,\mathbf{y}_d)$, the network and loss function are evaluated in a forward pass. All of the partial derivative tensors are then calculated and multiplied together to get the weight updates. Each weight update is evaluated for a minibatch in stochastic gradient descent. All of the tensors are two-dimension, apart from the three-dimensional weight partial derivative, $\frac{\partial \mathbf{g}}{\partial \mathbf{W}}$. In this case, the matrix-tensor multiplication operates along the tensor's third dimension ($k$-index),
+For each sample $(\mathbf{x}_d,\mathbf{y}_d)$, the network and loss function are evaluated in a forward pass. All of the partial derivative tensors are then calculated and multiplied together to get weight/bias updates. Each weight update is evaluated for a mini-batch using stochastic gradient descent. All of the partial derivative tensors are two-dimensional, apart from the three-dimensional weight partial derivatives, $\frac{\partial \mathbf{g}}{\partial \mathbf{W}}$. In this case, the matrix-tensor multiplication operates along the tensor's third dimension ($k$-index),
 
 $$
 \begin{aligned}
