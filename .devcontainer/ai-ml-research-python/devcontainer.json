@@ -1,0 +1,38 @@
+{
+  "name": "devcontainer-ai-ml-research-python",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "ai-ml-research-python",
+  "workspaceFolder": "/workspace/src-python",
+  "postCreateCommand": "uv sync",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "json.schemas": [
+          {
+            "fileMatch": [
+              "*/devcontainer-feature.json"
+            ],
+            "url": "https://raw.githubusercontent.com/devcontainers/spec/main/schemas/devContainerFeature.schema.json"
+          }
+        ]
+      },
+      "extensions": [
+        "sst-dev.opencode",
+        "mads-hartmann.bash-ide-vscode",
+        "ms-python.python",
+        "ms-azuretools.vscode-docker",
+        "ms-python.black-formatter"
+      ]
+    }
+  },
+  "features": {
+    "ghcr.io/devcontainers/features/docker-outside-of-docker:1": {
+      "moby": false
+    },
+    "ghcr.io/devcontainers/features/aws-cli:1": {},
+    "ghcr.io/devcontainers/features/github-cli:1": {},
+    "ghcr.io/ronniestafford/devcontainers/opencode:latest": {
+      "opencodeversion": "1.17.18"
+    }
+  }
+}

@@ -1,0 +1,12 @@
+FROM mcr.microsoft.com/devcontainers/python:3.12-bookworm
+
+# Stops package hash mismatch
+# USER root
+# RUN printf '%s\n' \
+#     'Acquire::http::Pipeline-Depth "0";' \
+#     'Acquire::https::Pipeline-Depth "0";' \
+#     'Acquire::Retries "5";' \
+#     > /etc/apt/apt.conf.d/99-no-pipeline
+
+
+COPY --from=ghcr.io/astral-sh/uv:0.12.13 /uv /uvx /usr/local/bin/

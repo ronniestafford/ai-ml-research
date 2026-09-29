@@ -1,0 +1,18 @@
+services:
+  ai-ml-research-latex:
+    build:
+      context: ..
+      dockerfile: .devcontainer/ai-ml-research-latex/Dockerfile
+    volumes:
+      - ..:/workspace
+    command: sleep infinity
+    user: texlive
+
+  ai-ml-research-python:
+    build:
+      context: ..
+      dockerfile: .devcontainer/ai-ml-research-python/Dockerfile
+    volumes:
+      - ..:/workspace
+    command: sleep infinity
+    user: vscode
