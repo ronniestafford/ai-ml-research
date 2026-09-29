@@ -30,3 +30,7 @@ $$ \mu_{Y|X=x} \coloneqq \mathbb{E}_{P_{Y|X=x}}[Y] $$
 $f_{\Theta}(\mathbf{x}_{d})=\mathbf{h}^{(L)}=\mathbf{f}_{d}$
 
 $$f_{\Theta}(\mathbf{x}_{d})=\mathbf{h}^{(L)}=\mathbf{f}_{d}$$
+
+## Other
+
+$\mathcal{L}_d$ with the target $y_{d} \in \mathcal{Y}$
