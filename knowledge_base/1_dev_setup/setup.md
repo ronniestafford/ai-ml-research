@@ -1,7 +1,7 @@
 # Dev Environment Setup
 
 ## Project Structure
-[Devcontainers](/.devcontainer) are available for both [python](/.devcontainer/ai-ml-research-python/) and [LaTeX](/.devcontainer/ai-ml-research-python/). The LaTeX container ships with the full LaTeX-Workshop (large container) to compile and render [documentation](/documentation/documentation.tex). Experiments and algorithms are contained in the [src](/src/) folder.
+[Devcontainers](/.devcontainer) are available for both [python](/.devcontainer/ai-ml-research-python/) and [LaTeX](/.devcontainer/ai-ml-research-python/). The LaTeX container ships with the full LaTeX-Workshop (large container) to compile and render [theory_snippets](/knowledge_base/theory_snippets.tex). Experiments and algorithms are contained in the [src](/src/) folder.
 
 ## Native (non DevContainer) Development
 If you want to exploit Apple Metal GPU acceleration, you have to develop natively and not in a container. Therefore install [uv](https://docs.astral.sh/uv/getting-started/installation/) directly on your dev machine to manage python and project dependencies,

@@ -2,7 +2,7 @@
 
 ## Risk Minimisation
 
-Assume a joint distribution $P_{X,Y}$ over the input space $\mathcal{X}$, output space $\mathcal{Y}$, function space $\mathcal{F}$ and loss function $\mathcal{L}$, population risk $R$, then the general form of the minimisation objective is,
+Assume a joint distribution $P_{X,Y}$ over the input space $\mathcal{X}$, output space $\mathcal{Y}$, function space $\mathcal{F}$ and loss function $\mathcal{L}$, population risk $R$, then the population risk minimisation objective is,
 
 $$
 \begin{aligned}
@@ -24,14 +24,13 @@ f^{*}&=\underset{f\in \mathcal{F}}{\mathrm{argmin}}{ \bigg[\mathbb{E}_{P_{X}} \m
 \end{aligned}
 $$
 
-This is the standard supervised learning problem where $P_{X}$ is the data generator distribution and $f$ is modelling some aspect of the conditional distribution. The aspect of $P_{Y|X}$ that is modelled is determined by the choice of loss function e.g. squared loss determines that $f^{*}$ models the conditional mean $\mu_{Y|X=x} \coloneqq \mathbb{E}_{Y|X=x}[Y]$ under the conditional distribution, similarly cross-entropy targets the conditional distribution $P(Y|X=x)$ itself etc.
+This is the standard supervised learning problem where $P_{X}$ is the data generator distribution and $f$ is modelling some aspect of the conditional distribution. The aspect of $P_{Y|X}$ that is modelled is determined by the choice of loss function e.g. squared loss determines that $f^{*}$ models the conditional mean $\mu_{Y|X=x} \coloneqq \mathbb{E}_{Y|X=x}[Y]$, similarly a cross-entropy loss targets the conditional distribution $P(Y|X=x)$ itself etc.
 
-Empirical risk $\hat{R}$ minimisation requires a finite sample data set $\lbrace(x_{d},y_{d})\rbrace_{d=1}^{D} \overset{\mathrm{i.i.d.}}{\sim} P_{X,Y}$, such that
+Empirical risk $\hat{R}$ minimisation proceeds by drawaing a finite sample data set $\lbrace(x_{d},y_{d})\rbrace_{d=1}^{D} \overset{\mathrm{i.i.d.}}{\sim} P_{X,Y}$, such that
 
 $$
 \begin{aligned}
-f^{*}&=\underset{f\in \mathcal{F}}{\mathrm{argmin}}{ \bigg[ \mathbb{E}_{P_{Y|X}} \left[  \mathcal{L}(f(X),Y) \right] \bigg] },\\
-&=\underset{f\in \mathcal{F}}{\mathrm{argmin}}{\bigg[\frac{1}{D}\sum_{d=1}^{D}\mathcal{L}(f(x_{d}),y_{d})\bigg]}.
+f^{*}&=\underset{f\in \mathcal{F}}{\mathrm{argmin}}{\bigg[\frac{1}{D}\sum_{d=1}^{D}\mathcal{L}(f(x_{d}),y_{d})\bigg]}.
 \end{aligned}
 $$
 
