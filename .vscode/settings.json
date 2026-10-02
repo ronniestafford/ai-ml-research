@@ -1,10 +1,9 @@
 {
+    "flake8.ignorePatterns": [
+        "*.ipynb"
+    ],
     "[python]": {
         "editor.defaultFormatter": "ms-python.black-formatter",
-        "editor.formatOnSave": true
-    },
-    "[*.ipynb]": {
-        "editor.defaultFormatter": "ms-python.black-formatter",
         "editor.formatOnSave": true,
-    }
+    },
 }
