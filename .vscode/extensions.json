@@ -1,0 +1,16 @@
+{
+  "recommendations": [
+    "ms-toolsai.jupyter-keymap",
+    "ms-python.vscode-pylance",
+    "ms-python.python",
+    "ms-python.debugpy",
+    "ms-python.vscode-python-envs",
+    "ms-python.black-formatter",
+    "ms-python.flake8",
+    "njpwerner.autodocstring",
+    "ms-toolsai.vscode-jupyter-cell-tags",
+    "ms-toolsai.vscode-jupyter-slideshow",
+    "ms-toolsai.jupyter",
+    "ms-toolsai.jupyter-renderers"
+  ]
+}

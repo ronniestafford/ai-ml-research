@@ -1,8 +1,9 @@
 {
-  "name": "devcontainer-reinforcement-learning",
-  "build": {
-    "dockerfile": "Dockerfile"
-  },
+  "name": "devcontainer-ai-ml-research-latex",
+  "dockerComposeFile": "../docker-compose.yml",
+  "service": "ai-ml-research-latex",
+  "workspaceFolder": "/workspace/documentation",
+  "updateContentCommand": "npm install -g @devcontainers/cli",
   "customizations": {
     "vscode": {
       "settings": {
@@ -27,26 +28,10 @@
     }
   },
   "features": {
-    // "ghcr.io/ronniestafford/devcontainers/texlive:latest": {
-    //   "packages": "full"
-    // },
     "ghcr.io/devcontainers/features/node:1": {
       "version": "24",
       "nodeGypDependencies": false
     },
-    // "ghcr.io/ronniestafford/devcontainers/opencode:latest": {
-    //   "opencodeversion": "1.2.0"
-    // },
     "ghcr.io/devcontainers/features/git:1": {}
-  },
-  "mounts": [
-    {
-      "source": "${localWorkspaceFolder}",
-      "target": "/workspace",
-      "type": "bind"
-    }
-  ],
-  "remoteUser": "texlive",
-  "containerUser": "root",
-  "updateContentCommand": "npm install -g @devcontainers/cli"
+  }
 }
