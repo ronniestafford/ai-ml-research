@@ -6,4 +6,9 @@
         "editor.defaultFormatter": "ms-python.black-formatter",
         "editor.formatOnSave": true,
     },
+    "python.analysis.typeCheckingMode": "basic",
+    "black-formatter.args": [
+        "--line-length",
+        "79"
+    ]
 }
