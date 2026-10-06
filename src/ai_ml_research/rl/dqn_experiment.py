@@ -28,13 +28,13 @@ print(f"SEED: {SEED}")
 LEARNING_RATE = 1e-3
 GAMMA = 0.99
 MINI_BATCH_SIZE = 64
-TARGET_Q_FUNCTION_UPDATE_FREQ = 1000
+TARGET_Q_FUNCTION_UPDATE_FREQ = 500
 EPS_START = 1.0
 EPS_END = 0.01
-EPS_DECAY = 2000
+EPS_DECAY = 5000
 
-EPISODE_COUNT = 500
-STORAGE_MEM_MAX = EPISODE_COUNT * 100
+TRAJECTORY_COUNT = 500
+STORAGE_MEM_MAX = TRAJECTORY_COUNT * 100
 MIN_BUFFER_SIZE = MINI_BATCH_SIZE * 3
 
 env = GymEnv("CartPole-v1")
@@ -92,19 +92,24 @@ def get_epsilon_greedy_action(
     return action_one_hot
 
 
-global_step = 0
+global_transition_idx = 0
 
 print("\n BEGIN EXPERIMENT \n")
 
-for episode in range(EPISODE_COUNT):
-    print(f"Step: {global_step}")
+for trajectory_idx in range(TRAJECTORY_COUNT):
     proto_transition: TensorDictBase = env.reset()
     done = False
+
+    loss_sum = 0.0
+    grad_norm_sum = 0.0
+    grad_rms_sum = 0.0
+    optim_step_count = 0
+    trajectory_transition_idx = 0
 
     while not done:
 
         epsilon: float = EPS_END + (EPS_START - EPS_END) * np.exp(
-            -global_step / EPS_DECAY
+            -global_transition_idx / EPS_DECAY
         )
 
         one_hot_action = get_epsilon_greedy_action(
@@ -151,25 +156,43 @@ for episode in range(EPISODE_COUNT):
                 * next_q
                 * ~transition_batch.get(("next", "done")).squeeze(-1)
             )
+
             loss = smooth_l1_loss(input=current_q, target=target_q)
-            if loss.item() is not None:
-                print(f"{loss.item()}")
 
             optimiser.zero_grad()
             loss.backward()
-            # torch.nn.utils.clip_grad_norm_(
-            #     q_function.parameters(), max_norm=10
-            # )
+            grad_norm: torch.Tensor = torch.nn.utils.clip_grad_norm_(
+                q_function.parameters(), max_norm=float("inf")
+            )
+            n_grad_elements = sum(
+                p.numel()
+                for p in q_function.parameters()
+                if p.grad is not None
+            )
+            grad_rms = grad_norm / n_grad_elements**0.5
+            loss_sum += loss.item()
+            grad_norm_sum += grad_norm.item()
+            grad_rms_sum += grad_rms.item()
             optimiser.step()
+            optim_step_count += 1
 
         proto_transition = full_transition.get("next")
 
         if proto_transition.get("done").item():
-            print(f"Episode {episode} finished at step {global_step}")
+            if optim_step_count > 0:
+                print(
+                    f"Trajectory {trajectory_idx} complete │"
+                    f" transitions: {trajectory_transition_idx + 1} │"
+                    f" global steps: {global_transition_idx + 1} │"
+                    f" avg_loss: {loss_sum / optim_step_count:.4f} │"
+                    f" avg_grad_norm: {grad_norm_sum / optim_step_count:.4f} │"
+                    f" avg_grad_rms: {grad_rms_sum / optim_step_count:.6f} │"
+                    f" epsilon: {epsilon:.4f}"
+                )
             done = True
 
-        if global_step % TARGET_Q_FUNCTION_UPDATE_FREQ == 0:
-            print("Update Target")
+        if global_transition_idx % TARGET_Q_FUNCTION_UPDATE_FREQ == 0:
             target_q_function.load_state_dict(q_function.state_dict())
 
-        global_step += 1
+        global_transition_idx += 1
+        trajectory_transition_idx += 1
