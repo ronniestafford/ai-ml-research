@@ -12,12 +12,17 @@ class QFunction(nn.Module):
             nn.ReLU(),
             nn.Linear(hidden_dim, hidden_dim),
             nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
+            nn.Linear(hidden_dim, hidden_dim),
+            nn.ReLU(),
             nn.Linear(hidden_dim, action_dim),
         )
 
     def forward(self, x):
-        q_values = self.network(x)
-        return q_values
+        return self.network(x)
 
 
 class DQNAgent(Protocol):

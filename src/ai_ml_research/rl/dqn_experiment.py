@@ -5,6 +5,7 @@ import torch
 from torch import optim
 from torch.nn.functional import one_hot, smooth_l1_loss
 from torchrl.envs import GymEnv
+from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer, LazyTensorStorage
 from ai_ml_research.rl.agent import QFunction
 
@@ -24,21 +25,23 @@ SEED, DEVICE = setup()
 
 print(f"SEED: {SEED}")
 
-SAMPLE_BATCH_SIZE = 16
-EPISODE_LENGTH = 4000
-STORAGE_MEM_MAX = EPISODE_LENGTH
-MIN_BUFFER_SIZE = SAMPLE_BATCH_SIZE * 3
-TARGET_Q_FUNCTION_UPDATE_FREQ = 100
+LEARNING_RATE = 1e-3
+GAMMA = 0.99
+MINI_BATCH_SIZE = 64
+TARGET_Q_FUNCTION_UPDATE_FREQ = 1000
 EPS_START = 1.0
 EPS_END = 0.01
 EPS_DECAY = 2000
 
+EPISODE_COUNT = 500
+STORAGE_MEM_MAX = EPISODE_COUNT * 100
+MIN_BUFFER_SIZE = MINI_BATCH_SIZE * 3
+
 env = GymEnv("CartPole-v1")
 
-OBS_DIM = env.observation_spec["observation"].shape[-1]
+STATE_DIM = env.observation_spec["observation"].shape[-1]
 ACTION_COUNT = env.action_spec.shape[-1]
-REWARD_DIM = env.reward_spec.shape[-1]
-HIDDEN_DIM = 128
+HIDDEN_DIM = 256
 
 print(f"Action count: {ACTION_COUNT}")
 print(f"observation_spec: {env.observation_spec}")
@@ -46,17 +49,15 @@ print(f"action_spec: {env.action_spec}")
 print(f"reward_spec: {env.reward_spec}")
 print(f"done_spec: {env.done_spec}")
 
-
-LEARNING_RATE = 0.01
-GAMMA = 0.99
-
 replay_buffer = TensorDictReplayBuffer(
     storage=LazyTensorStorage(STORAGE_MEM_MAX),
-    # batch_size=SAMPLE_BATCH_SIZE,
+    batch_size=MINI_BATCH_SIZE,
 )
 
-q_function = QFunction(OBS_DIM, ACTION_COUNT, HIDDEN_DIM)
+q_function = QFunction(STATE_DIM, ACTION_COUNT, HIDDEN_DIM)
 target_q_function = copy.deepcopy(q_function).requires_grad_(False)
+target_q_function.eval()
+
 loss_fn = smooth_l1_loss
 optimiser = optim.Adam(params=q_function.parameters(), lr=LEARNING_RATE)
 
@@ -78,6 +79,7 @@ def get_epsilon_greedy_action(
     if greedy_mask.any():
         with torch.inference_mode():
             q_values = q_function(observation[greedy_mask])
+
         action_idx[greedy_mask] = q_values.argmax(dim=-1)
 
     action_one_hot = one_hot(action_idx, num_classes=action_count).to(
@@ -90,71 +92,84 @@ def get_epsilon_greedy_action(
     return action_one_hot
 
 
-td = env.reset()
 global_step = 0
 
 print("\n BEGIN EXPERIMENT \n")
 
-for _ in range(EPISODE_LENGTH):
+for episode in range(EPISODE_COUNT):
     print(f"Step: {global_step}")
-    epsilon: float = EPS_END + (EPS_START - EPS_END) * np.exp(
-        -global_step / EPS_DECAY
-    )
+    proto_transition: TensorDictBase = env.reset()
+    done = False
 
-    one_hot_action = get_epsilon_greedy_action(
-        observation=td["observation"],
-        epsilon=epsilon,
-        action_count=ACTION_COUNT,
-    )
+    while not done:
 
-    # one_hot_action = env.action_spec.rand()
-    td["action"] = one_hot_action
-
-    td = env.step(td)
-    replay_buffer.add(td)
-
-    # Optimise #
-    if len(replay_buffer) > MIN_BUFFER_SIZE:
-        batch = replay_buffer.sample(
-            batch_size=min(len(replay_buffer), SAMPLE_BATCH_SIZE)
-        ).to(DEVICE)
-
-        q_values = q_function(batch["observation"])  # [batch, n_actions]
-
-        # gather adds to the autograd graph - making sure backprop is through max action only.
-        action_idx = batch["action"].argmax(dim=-1)
-        current_q = q_values.gather(-1, action_idx.unsqueeze(1)).squeeze(1)
-        with torch.inference_mode():
-            next_q = (
-                target_q_function(batch["next", "observation"])
-                .max(dim=-1)
-                .values
-            )
-
-        target_q = batch["next", "reward"].squeeze(-1) + (
-            GAMMA * next_q * ~batch["next", "done"].squeeze(-1)
+        epsilon: float = EPS_END + (EPS_START - EPS_END) * np.exp(
+            -global_step / EPS_DECAY
         )
 
-        loss = smooth_l1_loss(input=current_q, target=target_q)
-        if loss.item() is not None:
-            print(f"{loss.item()}")
+        one_hot_action = get_epsilon_greedy_action(
+            observation=proto_transition.get("observation"),
+            epsilon=epsilon,
+            action_count=ACTION_COUNT,
+        )
 
-        optimiser.zero_grad()
-        loss.backward()
-        # torch.nn.utils.clip_grad_norm_(q_function.parameters(), max_norm=10)
-        optimiser.step()
+        # one_hot_action = env.action_spec.rand()
+        proto_transition.set("action", one_hot_action)
 
-    # Reset when episode ends
-    if td["next", "done"].item():
-        print("Resetting MDP")
-        td = env.reset()
+        full_transition: TensorDictBase = env.step(proto_transition)
+        replay_buffer.add(full_transition)
 
-    if global_step % TARGET_Q_FUNCTION_UPDATE_FREQ == 0:
-        print("Update Target")
-        target_q_function.load_state_dict(q_function.state_dict())
+        # Optimise #
+        if len(replay_buffer) > MIN_BUFFER_SIZE:
+            transition_batch = replay_buffer.sample(
+                batch_size=min(len(replay_buffer), MINI_BATCH_SIZE)
+            ).to(DEVICE)
 
-    global_step += 1
+            q_values: torch.Tensor = q_function(
+                transition_batch.get("observation")
+            )  # [batch, n_actions]
 
-print(f"Data Sample Count: {len(replay_buffer)}")
-print(f"Data Sample: {replay_buffer.sample(batch_size=1)["observation"]}")
-# batch = replay_buffer.sample(batch_size=10)
+            # backprop is through max action only
+            action_idx = transition_batch.get("action").argmax(dim=-1)
+            # .gather adds to autograd graph
+            current_q = q_values.gather(
+                dim=-1, index=action_idx.unsqueeze(1)
+            ).squeeze(1)
+
+            with torch.inference_mode():
+                next_q: torch.Tensor = (
+                    target_q_function(
+                        transition_batch.get(("next", "observation"))
+                    )
+                    .max(dim=-1)
+                    .values
+                )
+            target_q: torch.Tensor = transition_batch.get(
+                ("next", "reward")
+            ).squeeze(-1) + (
+                GAMMA
+                * next_q
+                * ~transition_batch.get(("next", "done")).squeeze(-1)
+            )
+            loss = smooth_l1_loss(input=current_q, target=target_q)
+            if loss.item() is not None:
+                print(f"{loss.item()}")
+
+            optimiser.zero_grad()
+            loss.backward()
+            # torch.nn.utils.clip_grad_norm_(
+            #     q_function.parameters(), max_norm=10
+            # )
+            optimiser.step()
+
+        proto_transition = full_transition.get("next")
+
+        if proto_transition.get("done").item():
+            print(f"Episode {episode} finished at step {global_step}")
+            done = True
+
+        if global_step % TARGET_Q_FUNCTION_UPDATE_FREQ == 0:
+            print("Update Target")
+            target_q_function.load_state_dict(q_function.state_dict())
+
+        global_step += 1
