@@ -9,10 +9,12 @@ from torch.nn.functional import smooth_l1_loss
 from torchrl.envs import GymEnv
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer, LazyTensorStorage
+
 from ai_ml_research.rl.dqn.agent import (
     QFunction,
     get_epsilon_greedy_action,
     optimise,
+    soft_update_target,
 )
 from ai_ml_research.rl.dqn.metrics import (
     GlobalMetrics,
@@ -31,6 +33,7 @@ def setup() -> tuple[int, torch.device]:
     device = torch.device(
         "mps" if torch.backends.mps.is_available() else "cpu"
     )
+    # device = torch.device("cpu")
     torch.set_default_device(device)
 
     return seed, device
@@ -53,8 +56,9 @@ def main():
     LEARNING_RATE: float = 1e-3
     GAMMA: float = 0.99
     MINI_BATCH_SIZE: int = 32
-    OPTIM_STEPS_PER_TRANSITION: int = 5
-    TARGET_Q_FUNC_UPDATE_FREQ: int = 2000
+    OPTIM_STEPS_PER_TRANSITION: int = 3
+    TARGET_Q_FUNC_UPDATE_FREQ: int = 2000  # was 2000
+    TAU: float = 0.5
     EPS_START: float = 1.0
     EPS_END: float = 0.01
     EPS_DECAY: float = 10000
@@ -166,8 +170,10 @@ def main():
                         % TARGET_Q_FUNC_UPDATE_FREQ
                         == 0
                     ):
-                        target_q_function.load_state_dict(
-                            q_function.state_dict()
+                        soft_update_target(
+                            q_function=q_function,
+                            target_q_function=target_q_function,
+                            tau=TAU,
                         )
 
             proto_transition = full_transition.get("next")

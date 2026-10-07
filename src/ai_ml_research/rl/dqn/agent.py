@@ -65,6 +65,21 @@ def get_epsilon_greedy_action(
     return action_one_hot
 
 
+def soft_update_target(
+    q_function: QFunction,
+    target_q_function: QFunction,
+    tau: float,
+) -> None:
+    # Soft update: θ_target ← (1 − τ)·θ_target + τ·θ_current
+    # τ=1: hard update
+    # τ=0: no update (freeze target)
+    with torch.no_grad():
+        for target_param, param in zip(
+            target_q_function.parameters(), q_function.parameters()
+        ):
+            target_param.mul_(1.0 - tau).add_(param, alpha=tau)
+
+
 def optimise(
     q_function: QFunction,
     target_q_function: QFunction,
