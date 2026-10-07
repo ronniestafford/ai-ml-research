@@ -1,6 +1,6 @@
 import copy
 import random
-from dataclasses import dataclass, replace
+from dataclasses import replace
 
 import numpy as np
 import torch
@@ -10,6 +10,12 @@ from torchrl.envs import GymEnv
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer, LazyTensorStorage
 from ai_ml_research.rl.agent import QFunction
+from ai_ml_research.rl.metrics import (
+    GlobalMetrics,
+    OptimisationMetrics,
+    TrajectoryMetrics,
+    print_metrics,
+)
 
 
 def setup() -> tuple[int, torch.device]:
@@ -67,52 +73,6 @@ def get_epsilon(
     )
 
 
-@dataclass(frozen=True)
-class OptimisationMetrics:
-    loss_sum: float = 0.0
-    grad_norm_sum: float = 0.0
-    grad_rms_sum: float = 0.0
-    optim_step_count: int = 0
-
-
-@dataclass(frozen=True)
-class TrajectoryMetrics:
-    transition_count: int = 0
-    discounted_reward: float = 0.0
-
-
-@dataclass(frozen=True)
-class GlobalMetrics:
-    trajectory_count: int = 0
-    transition_count: int = 0
-    optim_step_count: int = 0
-    epsilon: float = 1
-    seed: int = 0
-
-
-def print_metrics(
-    trajectory_idx: int,
-    metrics_global: GlobalMetrics,
-    metrics_trajectory: TrajectoryMetrics,
-    metrics_optimisation: OptimisationMetrics,
-):
-    if metrics_optimisation.optim_step_count > 0:
-        print(
-            f"Trajectory {trajectory_idx} │"
-            f" discounted reward: {metrics_trajectory.discounted_reward:.4f} │"
-            f" transitions: {metrics_trajectory.transition_count} │"
-            f" total transitions: {metrics_global.transition_count} │"
-            f" total optim steps: {metrics_global.optim_step_count} │"
-            f" avg_loss: "
-            f"{metrics_optimisation.loss_sum / metrics_optimisation.optim_step_count:.4f} │"
-            f" avg_grad_norm: "
-            f"{metrics_optimisation.grad_norm_sum / metrics_optimisation.optim_step_count:.4f} │"
-            f" avg_grad_rms: "
-            f"{metrics_optimisation.grad_rms_sum / metrics_optimisation.optim_step_count:.6f} │"
-            f" epsilon: {metrics_global.epsilon:.4f}"
-        )
-
-
 def optimise(
     q_function: QFunction,
     target_q_function: QFunction,
@@ -123,6 +83,7 @@ def optimise(
     gamma: float,
     n_grad_elements: int,
     max_norm: float,
+    huber_beta: float,
 ) -> OptimisationMetrics:
 
     # Begin autograd graph
@@ -132,7 +93,7 @@ def optimise(
 
     # backprop is through max action only
     action_idx = minibatch.get("action").argmax(dim=-1)
-    # .gather adds this action to autograd graph
+    # .gather adds all the actions to autograd graph
     current_q = q_values.gather(dim=-1, index=action_idx.unsqueeze(1)).squeeze(
         1
     )
@@ -144,21 +105,33 @@ def optimise(
             .values
         )
 
+    # "Terminated": There is no successor state if MDP trajectory is terminated
+    # e.g. when cart-pole pole is dropped.
     target_q: torch.Tensor = minibatch.get(("next", "reward")).squeeze(-1) + (
         gamma
         * successor_q
         * ~minibatch.get(("next", "terminated")).squeeze(-1)
     )
 
-    loss = loss_fn(input=current_q, target=target_q)
+    # TD error δ = r + γ·max_a' Q_target(s',a') − Q(s,a)
+    with torch.no_grad():
+        td_error: torch.Tensor = target_q - current_q
+        td_error_abs = td_error.abs()
+        td_error_element_count: int = td_error.numel()
+        td_error_in_huber_count: int = int(
+            (td_error_abs < huber_beta).sum().item()
+        )
+
+    loss = loss_fn(input=current_q, target=target_q, beta=huber_beta)
 
     optimiser.zero_grad(set_to_none=True)
     loss.backward()
 
+    # Not really needed has TD error rarely exceeds
+    # quadratic regime of Huber loss anyway.
     grad_norm: float = torch.nn.utils.clip_grad_norm_(
         q_function.parameters(), max_norm=max_norm
     ).item()
-
     post_clip_norm = min(grad_norm, max_norm)
     grad_rms: float = post_clip_norm / n_grad_elements**0.5
 
@@ -170,6 +143,14 @@ def optimise(
         grad_norm_sum=metrics.grad_norm_sum + post_clip_norm,
         grad_rms_sum=metrics.grad_rms_sum + grad_rms,
         optim_step_count=metrics.optim_step_count + 1,
+        td_error_sum=metrics.td_error_sum + td_error.sum().item(),
+        td_error_abs_sum=metrics.td_error_abs_sum + td_error_abs.sum().item(),
+        td_error_sq_sum=metrics.td_error_sq_sum
+        + td_error.square().sum().item(),
+        td_error_in_huber_count=metrics.td_error_in_huber_count
+        + td_error_in_huber_count,
+        td_error_element_count=metrics.td_error_element_count
+        + td_error_element_count,
     )
 
 
@@ -187,15 +168,17 @@ def main():
 
     HIDDEN_DIM: int = 128
     MAX_NORM: float = 10.0
+    HUBER_BETA: float = 1.0
 
-    env = GymEnv("CartPole-v1", seed=SEED)
+    env = GymEnv("CartPole-v1")
+    env.set_seed(SEED)
     MAX_TRANSITION_COUNT: int = env.spec.max_episode_steps
     STATE_DIM: int = env.observation_spec["observation"].shape[-1]
     ACTION_COUNT: int = env.action_spec.shape[-1]
 
     TRAJECTORY_COUNT: int = 1500
     STORAGE_MEM_MAX: int = TRAJECTORY_COUNT * MAX_TRANSITION_COUNT
-    MIN_BUFFER_SIZE: int = MAX_TRANSITION_COUNT * 2
+    MIN_BUFFER_SIZE: int = MAX_TRANSITION_COUNT * 5
 
     print(f"MAX_TRANSITION_COUNT: {MAX_TRANSITION_COUNT}")
     print(f"Action count: {ACTION_COUNT}")
@@ -276,6 +259,7 @@ def main():
                     gamma=GAMMA,
                     n_grad_elements=n_grad_elements,
                     max_norm=MAX_NORM,
+                    huber_beta=HUBER_BETA,
                 )
 
                 metrics_global = replace(
@@ -291,14 +275,17 @@ def main():
             ):
                 target_q_function.load_state_dict(q_function.state_dict())
 
+            # "done" == "truncated" (trajectory exceeded max transition count,
+            # a successor state exists) OR "terminated" (trajectory cut short
+            # early because of an even e.g. dropped the pole in cart-pole).
             if proto_transition.get("done").item():
+                done = True
                 print_metrics(
                     trajectory_idx,
                     metrics_global,
                     metrics_trajectory,
                     metrics_optimisation,
                 )
-                done = True
                 metrics_global = replace(
                     metrics_global,
                     trajectory_count=metrics_global.trajectory_count + 1,
