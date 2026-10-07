@@ -67,6 +67,52 @@ def get_epsilon(
     )
 
 
+@dataclass(frozen=True)
+class OptimisationMetrics:
+    loss_sum: float = 0.0
+    grad_norm_sum: float = 0.0
+    grad_rms_sum: float = 0.0
+    optim_step_count: int = 0
+
+
+@dataclass(frozen=True)
+class TrajectoryMetrics:
+    transition_count: int = 0
+    discounted_reward: float = 0.0
+
+
+@dataclass(frozen=True)
+class GlobalMetrics:
+    trajectory_count: int = 0
+    transition_count: int = 0
+    optim_step_count: int = 0
+    epsilon: float = 1
+    seed: int = 0
+
+
+def print_metrics(
+    trajectory_idx: int,
+    metrics_global: GlobalMetrics,
+    metrics_trajectory: TrajectoryMetrics,
+    metrics_optimisation: OptimisationMetrics,
+):
+    if metrics_optimisation.optim_step_count > 0:
+        print(
+            f"Trajectory {trajectory_idx} │"
+            f" discounted reward: {metrics_trajectory.discounted_reward:.4f} │"
+            f" transitions: {metrics_trajectory.transition_count} │"
+            f" total transitions: {metrics_global.transition_count} │"
+            f" total optim steps: {metrics_global.optim_step_count} │"
+            f" avg_loss: "
+            f"{metrics_optimisation.loss_sum / metrics_optimisation.optim_step_count:.4f} │"
+            f" avg_grad_norm: "
+            f"{metrics_optimisation.grad_norm_sum / metrics_optimisation.optim_step_count:.4f} │"
+            f" avg_grad_rms: "
+            f"{metrics_optimisation.grad_rms_sum / metrics_optimisation.optim_step_count:.6f} │"
+            f" epsilon: {metrics_global.epsilon:.4f}"
+        )
+
+
 def optimise(
     q_function: QFunction,
     target_q_function: QFunction,
@@ -75,6 +121,8 @@ def optimise(
     metrics: OptimisationMetrics,
     loss_fn,
     gamma: float,
+    n_grad_elements: int,
+    max_norm: float,
 ) -> OptimisationMetrics:
 
     # Begin autograd graph
@@ -104,68 +152,25 @@ def optimise(
 
     loss = loss_fn(input=current_q, target=target_q)
 
-    optimiser.zero_grad()
+    optimiser.zero_grad(set_to_none=True)
     loss.backward()
 
     grad_norm: float = torch.nn.utils.clip_grad_norm_(
-        q_function.parameters(), max_norm=float(10)
+        q_function.parameters(), max_norm=max_norm
     ).item()
-    n_grad_elements = sum(
-        p.numel() for p in q_function.parameters() if p.grad is not None
-    )
 
-    grad_rms = grad_norm / n_grad_elements**0.5
+    post_clip_norm = min(grad_norm, max_norm)
+    grad_rms: float = post_clip_norm / n_grad_elements**0.5
+
+    optimiser.step()
+
     return replace(
         metrics,
         loss_sum=metrics.loss_sum + loss.item(),
-        grad_norm_sum=metrics.grad_norm_sum + grad_norm,
+        grad_norm_sum=metrics.grad_norm_sum + post_clip_norm,
         grad_rms_sum=metrics.grad_rms_sum + grad_rms,
         optim_step_count=metrics.optim_step_count + 1,
     )
-
-
-@dataclass(frozen=True)
-class OptimisationMetrics:
-    loss_sum: float = 0.0
-    grad_norm_sum: float = 0.0
-    grad_rms_sum: float = 0.0
-    optim_step_count: int = 0
-
-
-@dataclass(frozen=True)
-class TrajectoryMetrics:
-    transition_idx: int = 0
-    discounted_reward: float = 0.0
-
-
-@dataclass(frozen=True)
-class GlobalMetrics:
-    total_transition_idx: int = 0
-    trajectory_idx: int = 0
-    epsilon: float = 1
-    seed: int = 0
-
-
-def print_metrics(
-    trajectory_idx: int,
-    metrics_global: GlobalMetrics,
-    metrics_trajectory: TrajectoryMetrics,
-    metrics_optimisation: OptimisationMetrics,
-):
-    if metrics_optimisation.optim_step_count > 0:
-        print(
-            f"Trajectory {trajectory_idx} complete │"
-            f" discounted reward: {metrics_trajectory.discounted_reward:.4f} │"
-            f" transitions: {metrics_trajectory.transition_idx} │"
-            f" global steps: {metrics_global.total_transition_idx + 1} │"
-            f" avg_loss: "
-            f"{metrics_optimisation.loss_sum / metrics_optimisation.optim_step_count:.4f} │"
-            f" avg_grad_norm: "
-            f"{metrics_optimisation.grad_norm_sum / metrics_optimisation.optim_step_count:.4f} │"
-            f" avg_grad_rms: "
-            f"{metrics_optimisation.grad_rms_sum / metrics_optimisation.optim_step_count:.6f} │"
-            f" epsilon: {metrics_global.epsilon:.4f}"
-        )
 
 
 def main():
@@ -174,24 +179,25 @@ def main():
 
     LEARNING_RATE: float = 1e-3
     GAMMA: float = 0.99
-    MINI_BATCH_SIZE: int = 64
-    TARGET_Q_FUNC_UPDATE_FREQ: int = 500
+    MINI_BATCH_SIZE: int = 32
+    TARGET_Q_FUNC_UPDATE_FREQ: int = 2000
     EPS_START: float = 1.0
     EPS_END: float = 0.01
     EPS_DECAY: float = 10000
 
-    TRAJECTORY_COUNT: int = 500
-    STORAGE_MEM_MAX: int = TRAJECTORY_COUNT * 100
-    MIN_BUFFER_SIZE: int = MINI_BATCH_SIZE * 3
+    HIDDEN_DIM: int = 128
+    MAX_NORM: float = 10.0
 
-    HIDDEN_DIM: int = 256
-
-    env = GymEnv("CartPole-v1")
-    env.set_seed(SEED)
-
+    env = GymEnv("CartPole-v1", seed=SEED)
+    MAX_TRANSITION_COUNT: int = env.spec.max_episode_steps
     STATE_DIM: int = env.observation_spec["observation"].shape[-1]
     ACTION_COUNT: int = env.action_spec.shape[-1]
 
+    TRAJECTORY_COUNT: int = 1500
+    STORAGE_MEM_MAX: int = TRAJECTORY_COUNT * MAX_TRANSITION_COUNT
+    MIN_BUFFER_SIZE: int = MAX_TRANSITION_COUNT * 2
+
+    print(f"MAX_TRANSITION_COUNT: {MAX_TRANSITION_COUNT}")
     print(f"Action count: {ACTION_COUNT}")
     print(f"observation_spec: {env.observation_spec}")
     print(f"action_spec: {env.action_spec}")
@@ -199,7 +205,7 @@ def main():
     print(f"done_spec: {env.done_spec}")
 
     replay_buffer = TensorDictReplayBuffer(
-        storage=LazyTensorStorage(STORAGE_MEM_MAX),
+        storage=LazyTensorStorage(STORAGE_MEM_MAX, device=DEVICE),
         batch_size=MINI_BATCH_SIZE,
     )
 
@@ -207,6 +213,7 @@ def main():
     target_q_function = copy.deepcopy(q_function).requires_grad_(False)
     target_q_function.eval()
 
+    n_grad_elements: int = q_function.get_param_count()
     loss_fn = smooth_l1_loss
     optimiser = optim.Adam(params=q_function.parameters(), lr=LEARNING_RATE)
 
@@ -218,6 +225,15 @@ def main():
     for trajectory_idx in range(TRAJECTORY_COUNT):
         metrics_trajectory = TrajectoryMetrics()
         metrics_optimisation = OptimisationMetrics()
+        metrics_global = replace(
+            metrics_global,
+            epsilon=get_epsilon(
+                metrics_global.transition_count,
+                EPS_START,
+                EPS_END,
+                EPS_DECAY,
+            ),
+        )
 
         proto_transition: TensorDictBase = env.reset()
         done = False
@@ -240,15 +256,15 @@ def main():
             metrics_trajectory = replace(
                 metrics_trajectory,
                 discounted_reward=metrics_trajectory.discounted_reward
-                + GAMMA**metrics_trajectory.transition_idx * reward,
-                transition_idx=metrics_trajectory.transition_idx + 1,
+                + GAMMA**metrics_trajectory.transition_count * reward,
+                transition_count=metrics_trajectory.transition_count + 1,
             )
 
             # Optimise #
             if len(replay_buffer) > MIN_BUFFER_SIZE:
                 minibatch = replay_buffer.sample(
                     batch_size=min(len(replay_buffer), MINI_BATCH_SIZE)
-                ).to(DEVICE)
+                )
 
                 metrics_optimisation = optimise(
                     q_function=q_function,
@@ -258,11 +274,22 @@ def main():
                     metrics=metrics_optimisation,
                     loss_fn=loss_fn,
                     gamma=GAMMA,
+                    n_grad_elements=n_grad_elements,
+                    max_norm=MAX_NORM,
                 )
 
-                optimiser.step()
+                metrics_global = replace(
+                    metrics_global,
+                    optim_step_count=metrics_global.optim_step_count + 1,
+                )
 
             proto_transition = full_transition.get("next")
+
+            if metrics_global.optim_step_count > 0 and (
+                metrics_global.optim_step_count % TARGET_Q_FUNC_UPDATE_FREQ
+                == 0
+            ):
+                target_q_function.load_state_dict(q_function.state_dict())
 
             if proto_transition.get("done").item():
                 print_metrics(
@@ -272,23 +299,14 @@ def main():
                     metrics_optimisation,
                 )
                 done = True
-
-            if (
-                metrics_global.total_transition_idx % TARGET_Q_FUNC_UPDATE_FREQ
-                == 0
-            ):
-                target_q_function.load_state_dict(q_function.state_dict())
+                metrics_global = replace(
+                    metrics_global,
+                    trajectory_count=metrics_global.trajectory_count + 1,
+                )
 
             metrics_global = replace(
                 metrics_global,
-                epsilon=get_epsilon(
-                    metrics_global.total_transition_idx,
-                    EPS_START,
-                    EPS_END,
-                    EPS_DECAY,
-                ),
-                total_transition_idx=metrics_global.total_transition_idx + 1,
-                trajectory_idx=trajectory_idx,
+                transition_count=metrics_global.transition_count + 1,
             )
 
 
