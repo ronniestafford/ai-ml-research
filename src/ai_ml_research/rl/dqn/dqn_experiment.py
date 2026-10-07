@@ -9,8 +9,8 @@ from torch.nn.functional import one_hot, smooth_l1_loss
 from torchrl.envs import GymEnv
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer, LazyTensorStorage
-from ai_ml_research.rl.agent import QFunction
-from ai_ml_research.rl.metrics import (
+from ai_ml_research.rl.dqn.agent import QFunction
+from ai_ml_research.rl.dqn.metrics import (
     GlobalMetrics,
     OptimisationMetrics,
     TrajectoryMetrics,
@@ -177,7 +177,7 @@ def main():
     ACTION_COUNT: int = env.action_spec.shape[-1]
 
     TRAJECTORY_COUNT: int = 1500
-    STORAGE_MEM_MAX: int = TRAJECTORY_COUNT * MAX_TRANSITION_COUNT
+    STORAGE_MEM_MAX: int = TRAJECTORY_COUNT * 50
     MIN_BUFFER_SIZE: int = MAX_TRANSITION_COUNT * 5
 
     print(f"MAX_TRANSITION_COUNT: {MAX_TRANSITION_COUNT}")
