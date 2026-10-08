@@ -13,14 +13,14 @@ class QFunction(nn.Module):
         state_dim: int,
         action_count: int,
         hidden_dim: int,
-        hidden_layers: int = 3,
+        hidden_layer_count: int,
     ):
         super().__init__()
 
         layers: list[nn.Module] = [nn.Linear(state_dim, hidden_dim)]
         layers.append(nn.ReLU())
 
-        for _ in range(hidden_layers - 1):
+        for _ in range(hidden_layer_count - 1):
             layers.append(nn.Linear(hidden_dim, hidden_dim))
             layers.append(nn.ReLU())
 
@@ -41,21 +41,34 @@ def get_epsilon_greedy_action(
     epsilon: float,
     action_count: int,
 ):
+    # [Performance] Random actions: keep on env device
+    env_device = observation.device
     is_single_observation = observation.ndim == 1
     if is_single_observation:
         observation = observation.unsqueeze(0)
+
     observation_count = observation.shape[0]
+    random_mask = (
+        torch.rand(observation_count, device=env_device) < epsilon
+    )
+    action_idx = torch.randint(
+        0, action_count, (observation_count,), device=env_device
+    )
 
-    # What actions are greedy or random?
-    random_mask = torch.rand(observation_count) < epsilon
-    greedy_mask = ~random_mask
-    action_idx = torch.randint(0, action_count, (observation_count,))
-
-    if greedy_mask.any():
+    # [Performance] Greedy actions: forward pass and greedy action indexes calculated on the model's device.
+    # Final action indexes calculated on the env device.
+    if not random_mask.all():
+        model_device = next(q_function.parameters()).device
         with torch.no_grad():
-            q_values = q_function(observation[greedy_mask])
-
-        action_idx[greedy_mask] = q_values.argmax(dim=-1)
+            # [Performance] Keep on model device
+            greedy_idx = q_function(observation.to(model_device)).argmax(
+                dim=-1
+            )
+        # [Performance] Final action indexes: calculate on env device,
+        # inhibit CPU sync with torch.where, just incase env_device is GPU-based.
+        action_idx = torch.where(
+            random_mask, action_idx, greedy_idx.to(env_device)
+        )
 
     action_one_hot = one_hot(action_idx, num_classes=action_count)
 
@@ -100,7 +113,7 @@ def optimise(
 
     # backprop is through max action only
     action_idx = minibatch.get("action").argmax(dim=-1)
-    # .gather adds all the actions to autograd graph
+    # .gather appends all the actions to autograd graph
     current_q = q_values.gather(dim=-1, index=action_idx.unsqueeze(1)).squeeze(
         1
     )
@@ -144,8 +157,7 @@ def optimise(
 
     optimiser.step()
 
-    # Metrics are accumulated as device scalars; no .item() calls here so
-    # the MPS pipeline is never stalled on a host sync. The single sync
+    # [Performance] Metrics are accumulated as device scalars. The single sync
     # happens in print_metrics, once per trajectory.
     return replace(
         metrics,
