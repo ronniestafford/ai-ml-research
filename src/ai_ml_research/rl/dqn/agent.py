@@ -18,12 +18,12 @@ class QFunction(nn.Module):
         super().__init__()
 
         layers: list[nn.Module] = [nn.Linear(state_dim, hidden_dim)]
+        layers.append(nn.ReLU())
 
         for _ in range(hidden_layers - 1):
-            layers.append(nn.ReLU())
             layers.append(nn.Linear(hidden_dim, hidden_dim))
+            layers.append(nn.ReLU())
 
-        layers.append(nn.ReLU())
         layers.append(nn.Linear(hidden_dim, action_count))
 
         self.network = nn.Sequential(*layers)
@@ -125,9 +125,9 @@ def optimise(
         td_error: torch.Tensor = target_q - current_q
         td_error_abs = td_error.abs()
         td_error_element_count: int = td_error.numel()
-        td_error_in_huber_count: int = int(
-            (td_error_abs < huber_beta).sum().item()
-        )
+        td_error_in_huber_count: torch.Tensor = (
+            td_error_abs < huber_beta
+        ).sum()
 
     loss = loss_fn(input=current_q, target=target_q, beta=huber_beta)
 
@@ -136,24 +136,26 @@ def optimise(
 
     # Not really needed has TD error rarely exceeds
     # quadratic regime of Huber loss anyway.
-    grad_norm: float = torch.nn.utils.clip_grad_norm_(
+    grad_norm: torch.Tensor = torch.nn.utils.clip_grad_norm_(
         q_function.parameters(), max_norm=max_norm
-    ).item()
-    post_clip_norm = min(grad_norm, max_norm)
-    grad_rms: float = post_clip_norm / n_grad_elements**0.5
+    )
+    post_clip_norm: torch.Tensor = grad_norm.clamp(max=max_norm)
+    grad_rms: torch.Tensor  = post_clip_norm / n_grad_elements**0.5
 
     optimiser.step()
 
+    # Metrics are accumulated as device scalars; no .item() calls here so
+    # the MPS pipeline is never stalled on a host sync. The single sync
+    # happens in print_metrics, once per trajectory.
     return replace(
         metrics,
-        loss_sum=metrics.loss_sum + loss.item(),
+        loss_sum=metrics.loss_sum + loss.detach(),
         grad_norm_sum=metrics.grad_norm_sum + post_clip_norm,
         grad_rms_sum=metrics.grad_rms_sum + grad_rms,
         optim_step_count=metrics.optim_step_count + 1,
-        td_error_sum=metrics.td_error_sum + td_error.sum().item(),
-        td_error_abs_sum=metrics.td_error_abs_sum + td_error_abs.sum().item(),
-        td_error_sq_sum=metrics.td_error_sq_sum
-        + td_error.square().sum().item(),
+        td_error_sum=metrics.td_error_sum + td_error.sum(),
+        td_error_abs_sum=metrics.td_error_abs_sum + td_error_abs.sum(),
+        td_error_sq_sum=metrics.td_error_sq_sum + td_error.square().sum(),
         td_error_in_huber_count=metrics.td_error_in_huber_count
         + td_error_in_huber_count,
         td_error_element_count=metrics.td_error_element_count

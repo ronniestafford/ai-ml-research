@@ -55,7 +55,7 @@ def main():
 
     LEARNING_RATE: float = 1e-3
     GAMMA: float = 0.99
-    MINI_BATCH_SIZE: int = 32
+    MINI_BATCH_SIZE: int = 64
     OPTIM_STEPS_PER_TRANSITION: int = 3
     TARGET_Q_FUNC_UPDATE_FREQ: int = 2000  # was 2000
     TAU: float = 0.5
