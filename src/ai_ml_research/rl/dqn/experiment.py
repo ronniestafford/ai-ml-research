@@ -25,19 +25,23 @@ from ai_ml_research.rl.dqn.metrics import (
 
 
 def setup() -> tuple[int, torch.device, torch.device]:
+    # [Performance] Intra-op parallelism overhead is
+    # disproportionate when using small neural nets.
+    torch.set_num_threads(1)
+
     seed = random.SystemRandom().randint(0, 2**32 - 1)
-    random.seed(seed)  # python random (epsilon etc.)
-    np.random.seed(seed)  # numpy
-    torch.manual_seed(seed)  # seeds CPU; also CUDA/MPS generators
+    random.seed(seed)           # python random (epsilon etc.)
+    np.random.seed(seed)        # numpy
+    torch.manual_seed(seed)     # seeds CPU; also CUDA/MPS generators
 
     model_device = torch.device(
         "mps" if torch.backends.mps.is_available() else "cpu"
     )
     env_device = torch.device("cpu")
 
-    # No torch.set_default_device: env, replay buffer and trajectory
-    # bookkeeping stay on the CPU; tensors cross to the compute device
-    # only at minibatch .to(device) below.
+    # [Performance] Don't use torch.set_default_device; env,
+    # replay buffer and trajectory bookkeeping stay on the CPU;
+    # Restrict tensors crossing to the compute device only at minibatch's .to(device) call.
 
     return seed, model_device, env_device
 
@@ -86,7 +90,7 @@ def main():
     LEARNING_RATE: float = 3e-4
     MINI_BATCH_SIZE: int = 64
     OPTIM_STEPS_PER_TRANSITION: int = 1
-    TARGET_Q_FUNC_UPDATE_PER_TRANSITION: int = 3
+    TRANSITIONS_PER_Q_FUNC_UPDATE: int = 3
     TARGET_Q_FUNC_SOFT_UPDATE: float = 0.005
     EPS_START: float = 1.0
     EPS_END: float = 0.01
@@ -105,7 +109,8 @@ def main():
     print(f"reward_spec: {env.reward_spec}")
     print(f"done_spec: {env.done_spec}")
 
-    # [Performance] The environment is usually on the CPU, so keep replay buffer CPU-side
+    # [Performance] The environment is usually on the CPU,
+    # so keep replay buffer CPU-side
     replay_buffer = TensorDictReplayBuffer(
         storage=LazyTensorStorage(REPLAY_BUFFER_MAX_SIZE, device=ENV_DEVICE),
         batch_size=MINI_BATCH_SIZE,
@@ -168,9 +173,12 @@ def main():
                 transition_count=metrics_trajectory.transition_count + 1,
             )
 
-            # Optimise #
+            # Optimise
             if len(replay_buffer) > WARM_UP_TRANSITION_COUNT:
                 for _ in range(OPTIM_STEPS_PER_TRANSITION):
+
+                    # [Performance] Commit batch to GPU here,
+                    # nowhere else.
                     minibatch = replay_buffer.sample(
                         batch_size=min(len(replay_buffer), MINI_BATCH_SIZE)
                     ).to(MODEL_DEVICE)
@@ -195,7 +203,7 @@ def main():
 
                     if (
                         metrics_global.optim_step_count
-                        % TARGET_Q_FUNC_UPDATE_PER_TRANSITION
+                        % TRANSITIONS_PER_Q_FUNC_UPDATE
                         == 0
                     ):
                         soft_update_target(

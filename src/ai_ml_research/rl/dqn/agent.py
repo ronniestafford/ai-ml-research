@@ -48,15 +48,14 @@ def get_epsilon_greedy_action(
         observation = observation.unsqueeze(0)
 
     observation_count = observation.shape[0]
-    random_mask = (
-        torch.rand(observation_count, device=env_device) < epsilon
-    )
+    random_mask = torch.rand(observation_count, device=env_device) < epsilon
     action_idx = torch.randint(
         0, action_count, (observation_count,), device=env_device
     )
 
-    # [Performance] Greedy actions: forward pass and greedy action indexes calculated on the model's device.
-    # Final action indexes calculated on the env device.
+    # [Performance] Greedy actions: forward pass and greedy action indexes
+    # calculated on the model's device. Final action indexes calculated on the
+    # env device.
     if not random_mask.all():
         model_device = next(q_function.parameters()).device
         with torch.no_grad():
@@ -65,7 +64,8 @@ def get_epsilon_greedy_action(
                 dim=-1
             )
         # [Performance] Final action indexes: calculate on env device,
-        # inhibit CPU sync with torch.where, just incase env_device is GPU-based.
+        # inhibit CPU sync with torch.where, just in case env_device
+        # is GPU-based.
         action_idx = torch.where(
             random_mask, action_idx, greedy_idx.to(env_device)
         )
@@ -153,7 +153,7 @@ def optimise(
         q_function.parameters(), max_norm=max_norm
     )
     post_clip_norm: torch.Tensor = grad_norm.clamp(max=max_norm)
-    grad_rms: torch.Tensor  = post_clip_norm / n_grad_elements**0.5
+    grad_rms: torch.Tensor = post_clip_norm / n_grad_elements**0.5
 
     optimiser.step()
 
