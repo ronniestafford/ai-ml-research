@@ -6,10 +6,10 @@ from torchrl.envs import GymEnv
 from ai_ml_research.rl.config import ExperimentConfig
 from ai_ml_research.rl.dqn.agent import (
     DQNAgent,
-    DQNOptimisationMetrics,
     QFunction,
 )
 from ai_ml_research.rl.dqn.config import DQNConfig
+from ai_ml_research.rl.dqn.metrics import DQNOptimisationMetrics
 from ai_ml_research.rl.experiment import run_experiment, setup
 
 
