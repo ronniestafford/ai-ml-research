@@ -2,14 +2,13 @@ import copy
 from collections.abc import Callable
 from dataclasses import dataclass, replace
 
-import numpy as np
 import torch
 from torch import nn, optim
 from torch.nn.functional import one_hot
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
-from ai_ml_research.rl.agent import Agent
+from ai_ml_research.rl.agent import Agent, get_epsilon_exp_decay
 from ai_ml_research.rl.dqn.config import DQNConfig
 from ai_ml_research.rl.metrics import (
     Count,
@@ -53,29 +52,6 @@ class DQNOptimisationMetrics(OptimisationMetrics):
     td_error_sq_sum: Scalar = 0.0
     td_error_in_huber_count: Count = 0
     td_error_element_count: int = 0
-
-
-def get_epsilon_exp_decay(
-    global_transition_idx: int,
-    eps_start: float,
-    eps_end: float,
-    eps_decay: float,
-) -> float:
-    return eps_end + (eps_start - eps_end) * np.exp(
-        -global_transition_idx / eps_decay
-    )
-
-
-def get_epsilon_linear_decay(
-    global_transition_idx: int,
-    eps_start: float,
-    eps_end: float,
-    transition_idx_end: float,
-) -> float:
-    return (
-        eps_start
-        + global_transition_idx * (eps_end - eps_start) / transition_idx_end
-    )
 
 
 def get_epsilon_greedy_action(
