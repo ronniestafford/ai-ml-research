@@ -17,6 +17,6 @@ Reproducing some old results and experimenting with the new.
 
 
 
-## Revisiting my PhD thesis in Model-Based RL
+## Experiments
 
-- In progress...
+- [Vanilla DQN](src/ai_ml_research/rl/dqn)

@@ -1,239 +1,98 @@
-import copy
-import random
-from dataclasses import replace
-
-import numpy as np
-import torch
 from torch import optim
 from torch.nn.functional import smooth_l1_loss
+from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
-from tensordict import TensorDictBase
-from torchrl.data import TensorDictReplayBuffer, LazyTensorStorage
 
+from ai_ml_research.rl.config import ExperimentConfig
 from ai_ml_research.rl.dqn.agent import (
+    DQNAgent,
+    DQNOptimisationMetrics,
     QFunction,
-    get_epsilon_greedy_action,
-    optimise,
-    soft_update_target,
 )
-from ai_ml_research.rl.dqn.metrics import (
-    GlobalMetrics,
-    OptimisationMetrics,
-    TrajectoryMetrics,
-    print_metrics,
-)
+from ai_ml_research.rl.dqn.config import DQNConfig
+from ai_ml_research.rl.experiment import run_experiment, setup
 
 
-def setup() -> tuple[int, torch.device, torch.device]:
-    # [Performance] Intra-op parallelism overhead is
-    # disproportionate when using small neural nets.
-    torch.set_num_threads(1)
-
-    seed = random.SystemRandom().randint(0, 2**32 - 1)
-    random.seed(seed)           # python random (epsilon etc.)
-    np.random.seed(seed)        # numpy
-    torch.manual_seed(seed)     # seeds CPU; also CUDA/MPS generators
-
-    model_device = torch.device(
-        "mps" if torch.backends.mps.is_available() else "cpu"
-    )
-    env_device = torch.device("cpu")
-
-    # [Performance] Don't use torch.set_default_device; env,
-    # replay buffer and trajectory bookkeeping stay on the CPU;
-    # Restrict tensors crossing to the compute device only at minibatch's .to(device) call.
-
-    return seed, model_device, env_device
-
-
-def get_epsilon_exp_decay(
-    global_transition_idx: int,
-    eps_start: float,
-    eps_end: float,
-    eps_decay: float,
-) -> float:
-    return eps_end + (eps_start - eps_end) * np.exp(
-        -global_transition_idx / eps_decay
-    )
-
-
-def get_epsilon_linear_decay(
-    global_transition_idx: int,
-    eps_start: float,
-    eps_end: float,
-    transition_idx_end: float,
-) -> float:
-    return (
-        eps_start
-        + global_transition_idx * (eps_end - eps_start) / transition_idx_end
-    )
-
-
-def main():
+def main() -> None:
     # Hardware and seed
-    SEED, MODEL_DEVICE, ENV_DEVICE = setup()
+    seed, model_device, env_device = setup()
 
     # Environment MDP
     env = GymEnv("CartPole-v1")
-    env.set_seed(SEED)
-    MAX_TRANSITION_COUNT: int = env.spec.max_episode_steps
-    STATE_DIM: int = env.observation_spec["observation"].shape[-1]
-    ACTION_COUNT: int = env.action_spec.shape[-1]
-    GAMMA: float = 0.99
-    WARM_UP_TRANSITION_COUNT: int = MAX_TRANSITION_COUNT * 2
+    env.set_seed(seed)
+    max_transition_count: int = env.spec.max_episode_steps
+    state_dim: int = env.observation_spec["observation"].shape[-1]
+    action_count: int = env.action_spec.shape[-1]
+    gamma: float = 0.99
 
-    # Data Collection
-    TRAJECTORY_COUNT: int = 1000
-    REPLAY_BUFFER_MAX_SIZE: int = 20000
-
-    # Optimisation
-    LEARNING_RATE: float = 3e-4
-    MINI_BATCH_SIZE: int = 64
-    OPTIM_STEPS_PER_TRANSITION: int = 1
-    TRANSITIONS_PER_Q_FUNC_UPDATE: int = 3
-    TARGET_Q_FUNC_SOFT_UPDATE: float = 0.005
-    EPS_START: float = 1.0
-    EPS_END: float = 0.01
-    EPS_DECAY: float = 10000
-
-    # Q Functions
-    HIDDEN_LAYER_COUNT = 2
-    HIDDEN_DIM: int = 128
-    MAX_GRAD_NORM: float = 10.0
-    HUBER_BETA: float = 1.0
-
-    print(f"MAX_TRANSITION_COUNT: {MAX_TRANSITION_COUNT}")
-    print(f"Action count: {ACTION_COUNT}")
+    print(f"MAX_TRANSITION_COUNT: {max_transition_count}")
+    print(f"Action count: {action_count}")
     print(f"observation_spec: {env.observation_spec}")
     print(f"action_spec: {env.action_spec}")
     print(f"reward_spec: {env.reward_spec}")
     print(f"done_spec: {env.done_spec}")
 
+    experiment_config = ExperimentConfig(
+        seed=seed,
+        model_device=model_device,
+        env_device=env_device,
+        gamma=gamma,
+        trajectory_count=1000,
+    )
+    config = DQNConfig(
+        gamma=gamma,
+        # Optimisation
+        learning_rate=3e-4,
+        mini_batch_size=64,
+        optim_steps_per_transition=1,
+        # Q Functions
+        hidden_dim=128,
+        hidden_layer_count=2,
+        # Target Q function
+        target_soft_update=0.005,
+        optim_steps_per_target_update=3,
+        # Loss and gradient clipping
+        huber_beta=1.0,
+        max_grad_norm=10.0,
+        # Exploration
+        epsilon_start=1.0,
+        epsilon_end=0.01,
+        epsilon_decay=10000,
+        # Replay buffer
+        replay_buffer_max_size=20000,
+        warm_up_transition_count=max_transition_count * 2,
+    )
+
     # [Performance] The environment is usually on the CPU,
-    # so keep replay buffer CPU-side
+    # so keep replay buffer CPU-side.
     replay_buffer = TensorDictReplayBuffer(
-        storage=LazyTensorStorage(REPLAY_BUFFER_MAX_SIZE, device=ENV_DEVICE),
-        batch_size=MINI_BATCH_SIZE,
+        storage=LazyTensorStorage(
+            config.replay_buffer_max_size, device=env_device
+        ),
+        batch_size=config.mini_batch_size,
     )
 
+    # [Performance] Deep networks on GPU.
     q_function = QFunction(
-        state_dim=STATE_DIM,
-        action_count=ACTION_COUNT,
-        hidden_dim=HIDDEN_DIM,
-        hidden_layer_count=HIDDEN_LAYER_COUNT,
-    ).to(MODEL_DEVICE)
-    target_q_function = copy.deepcopy(q_function).requires_grad_(False)
-    target_q_function.eval()
+        state_dim=state_dim,
+        action_count=action_count,
+        hidden_dim=config.hidden_dim,
+        hidden_layer_count=config.hidden_layer_count,
+    ).to(model_device)
 
-    n_grad_elements: int = q_function.get_param_count()
-    loss_fn = smooth_l1_loss
-    optimiser = optim.Adam(params=q_function.parameters(), lr=LEARNING_RATE)
-
-    print("\n BEGIN EXPERIMENT \n")
-    metrics_global = GlobalMetrics(
-        seed=SEED,
-        epsilon=get_epsilon_exp_decay(0, EPS_START, EPS_END, EPS_DECAY),
+    agent = DQNAgent(
+        q_function=q_function,
+        optimiser=optim.Adam(
+            params=q_function.parameters(), lr=config.learning_rate
+        ),
+        replay_buffer=replay_buffer,
+        loss_fn=smooth_l1_loss,
+        action_count=action_count,
+        config=config,
+        optimisation_metrics=DQNOptimisationMetrics(),
     )
 
-    for trajectory_idx in range(TRAJECTORY_COUNT):
-        metrics_trajectory = TrajectoryMetrics()
-        metrics_optimisation = OptimisationMetrics()
-        metrics_global = replace(
-            metrics_global,
-            epsilon=get_epsilon_exp_decay(
-                metrics_global.transition_count,
-                EPS_START,
-                EPS_END,
-                EPS_DECAY,
-            ),
-        )
-
-        proto_transition: TensorDictBase = env.reset()
-        done = False
-
-        while not done:
-
-            one_hot_action = get_epsilon_greedy_action(
-                q_function=q_function,
-                observation=proto_transition.get("observation"),
-                epsilon=metrics_global.epsilon,
-                action_count=ACTION_COUNT,
-            )
-
-            # one_hot_action = env.action_spec.rand()
-            proto_transition.set("action", one_hot_action)
-            full_transition: TensorDictBase = env.step(proto_transition)
-            replay_buffer.add(full_transition)
-
-            reward: float = full_transition.get(("next", "reward")).item()
-            metrics_trajectory = replace(
-                metrics_trajectory,
-                discounted_reward=metrics_trajectory.discounted_reward
-                + GAMMA**metrics_trajectory.transition_count * reward,
-                transition_count=metrics_trajectory.transition_count + 1,
-            )
-
-            # Optimise
-            if len(replay_buffer) > WARM_UP_TRANSITION_COUNT:
-                for _ in range(OPTIM_STEPS_PER_TRANSITION):
-
-                    # [Performance] Commit batch to GPU here,
-                    # nowhere else.
-                    minibatch = replay_buffer.sample(
-                        batch_size=min(len(replay_buffer), MINI_BATCH_SIZE)
-                    ).to(MODEL_DEVICE)
-
-                    metrics_optimisation = optimise(
-                        q_function=q_function,
-                        target_q_function=target_q_function,
-                        optimiser=optimiser,
-                        minibatch=minibatch,
-                        metrics=metrics_optimisation,
-                        loss_fn=loss_fn,
-                        gamma=GAMMA,
-                        n_grad_elements=n_grad_elements,
-                        max_norm=MAX_GRAD_NORM,
-                        huber_beta=HUBER_BETA,
-                    )
-
-                    metrics_global = replace(
-                        metrics_global,
-                        optim_step_count=metrics_global.optim_step_count + 1,
-                    )
-
-                    if (
-                        metrics_global.optim_step_count
-                        % TRANSITIONS_PER_Q_FUNC_UPDATE
-                        == 0
-                    ):
-                        soft_update_target(
-                            q_function=q_function,
-                            target_q_function=target_q_function,
-                            tau=TARGET_Q_FUNC_SOFT_UPDATE,
-                        )
-
-            proto_transition = full_transition.get("next")
-
-            # "done" == "truncated" (trajectory exceeded max transition count,
-            # a successor state exists) OR "terminated" (trajectory cut short
-            # early because of an event e.g. dropped the pole in cart-pole).
-            if proto_transition.get("done").item():
-                done = True
-                print_metrics(
-                    trajectory_idx,
-                    metrics_global,
-                    metrics_trajectory,
-                    metrics_optimisation,
-                )
-                metrics_global = replace(
-                    metrics_global,
-                    trajectory_count=metrics_global.trajectory_count + 1,
-                )
-
-            metrics_global = replace(
-                metrics_global,
-                transition_count=metrics_global.transition_count + 1,
-            )
+    run_experiment(env=env, agent=agent, config=experiment_config)
 
 
 if __name__ == "__main__":
