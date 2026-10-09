@@ -22,7 +22,14 @@
             "context": 131072,
             "output": 32768
           }
-        }
+        },
+        "unsloth/Qwen3.6-35B-A3B-GGUF:Q8_0": {
+          "name": "Local: Qwen3.6-35B-A3B-GGUF:Q8_0",
+          "limit": {
+            "context": 131072,
+            "output": 32768
+          }
+        },
       }
     }
   }
