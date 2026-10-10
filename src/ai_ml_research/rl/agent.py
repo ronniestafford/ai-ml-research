@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from dataclasses import fields, replace
 from typing import Any, Generic, TypeVar
 
+import numpy as np
 import torch
 from tensordict import TensorDictBase
 
@@ -14,6 +15,29 @@ from ai_ml_research.rl.metrics import (
 # OptimisationMetrics can be specialised to type T
 # e.g. DQNAgent inherits Agent[DQNOptimisationMetrics].
 T = TypeVar("T", bound=OptimisationMetrics)
+
+
+def get_epsilon_exp_decay(
+    global_transition_idx: int,
+    eps_start: float,
+    eps_end: float,
+    eps_decay: float,
+) -> float:
+    return eps_end + (eps_start - eps_end) * np.exp(
+        -global_transition_idx / eps_decay
+    )
+
+
+def get_epsilon_linear_decay(
+    global_transition_idx: int,
+    eps_start: float,
+    eps_end: float,
+    transition_idx_end: float,
+) -> float:
+    return (
+        eps_start
+        + global_transition_idx * (eps_end - eps_start) / transition_idx_end
+    )
 
 
 class Agent(ABC, Generic[T]):
