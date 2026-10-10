@@ -344,3 +344,4 @@ documentation/build/_markdown_fundamentals/**
 .opencode/package-lock.json
 
 __pycache__
+.mypy_cache
