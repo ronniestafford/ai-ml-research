@@ -19,4 +19,5 @@ Reproducing some old results and experimenting with the new.
 
 ## Experiments
 
-- [Vanilla DQN](src/ai_ml_research/rl/dqn)
+- [Template](src/ai_ml_research/rl/template/), scaffolding for creating new agents and experiments.
+- [Vanilla DQN](src/ai_ml_research/rl/dqn), implementation of DeepMind's famous deep Q-learning paper on a small low dimensional state-space MDP.

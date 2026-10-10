@@ -23,7 +23,8 @@ def main() -> None:
     max_transition_count: int = env.spec.max_episode_steps
     state_dim: int = env.observation_spec["observation"].shape[-1]
     action_count: int = env.action_spec.shape[-1]
-    gamma: float = 0.99
+    # Discount rate for the experiment's evaluated returns metric
+    evaluation_gamma: float = 0.99
 
     print(f"MAX_TRANSITION_COUNT: {max_transition_count}")
     print(f"Action count: {action_count}")
@@ -36,11 +37,12 @@ def main() -> None:
         seed=seed,
         model_device=model_device,
         env_device=env_device,
-        gamma=gamma,
+        gamma=evaluation_gamma,
         trajectory_count=1000,
     )
     config = DQNConfig(
-        gamma=gamma,
+        # Discount rate for the Bellman target
+        gamma=0.99,
         # Optimisation
         learning_rate=3e-4,
         mini_batch_size=64,
