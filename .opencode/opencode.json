@@ -1,6 +1,13 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "model": "llama.cpp/unsloth/Qwen3.8-Flash-Next-GGUF:UD-IQ4_XS",
+  "permission": {
+    "bash": {
+      "uv *": "deny",
+      "pip *": "deny",
+      "pip3 *": "deny"
+    }
+  },
   "provider": {
     "llama.cpp": {
       "npm": "@ai-sdk/openai-compatible",
