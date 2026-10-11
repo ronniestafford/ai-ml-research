@@ -2,10 +2,10 @@ from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.config import ExperimentConfig
 from ai_ml_research.rl.experiment import run_experiment, setup
-from ai_ml_research.rl.mbrl_pcme.agent import MbrlPcmeAgent
-from ai_ml_research.rl.mbrl_pcme.config import MbrlPcmeConfig
-from ai_ml_research.rl.mbrl_pcme.metrics import (
-    MbrlPcmeOptimisationMetrics,
+from ai_ml_research.rl.dpcme.agent import DPCMEAgent
+from ai_ml_research.rl.dpcme.config import DPCMEConfig
+from ai_ml_research.rl.dpcme.metrics import (
+    DPCMEOptimisationMetrics,
 )
 
 
@@ -27,7 +27,7 @@ def main() -> None:
         gamma=evaluation_gamma,
         trajectory_count=5,
     )
-    config = MbrlPcmeConfig(
+    config = DPCMEConfig(
         # Discount rate for the agent's Bellman target
         gamma=0.99,
         # Unused by the random policy; placeholder values to be replaced
@@ -37,10 +37,10 @@ def main() -> None:
         optim_steps_per_transition=1,
     )
 
-    agent = MbrlPcmeAgent(
+    agent = DPCMEAgent(
         action_count=action_count,
         config=config,
-        optimisation_metrics=MbrlPcmeOptimisationMetrics(),
+        optimisation_metrics=DPCMEOptimisationMetrics(),
     )
 
     run_experiment(env=env, agent=agent, config=experiment_config)

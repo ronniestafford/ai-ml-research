@@ -118,10 +118,10 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         optimisation_metrics: DQNOptimisationMetrics,
     ) -> None:
         super().__init__(optimisation_metrics)
-        self.q_function = q_function
+        self.q_function = q_function  # Online Q function
         self.target_q_function = copy.deepcopy(q_function).requires_grad_(
             False
-        )
+        )  # Target Q function (bootstrapped learning target)
         self.target_q_function.eval()
         self.optimiser = optimiser
         self.replay_buffer = replay_buffer
@@ -147,6 +147,9 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         )
 
     def act(self, observation: torch.Tensor) -> torch.Tensor:
+        """
+        Behaviour (exploration) epsilon-greedy policy from online Q function
+        """
         return get_epsilon_greedy_action(
             q_function=self.q_function,
             observation=observation,

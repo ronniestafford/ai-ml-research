@@ -7,7 +7,7 @@ from ai_ml_research.rl.metrics import (
 
 
 @dataclass(frozen=True)
-class MbrlPcmeOptimisationMetrics(OptimisationMetrics):
+class DPCMEOptimisationMetrics(OptimisationMetrics):
     # Every new field must declare a default: Agent.on_trajectory_start
     # resets all fields (except optim_step_count) to their field.default.
 

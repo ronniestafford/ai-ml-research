@@ -5,11 +5,13 @@ from torch.nn.functional import one_hot
 from tensordict import TensorDictBase
 
 from ai_ml_research.rl.agent import Agent
-from ai_ml_research.rl.mbrl_pcme.config import MbrlPcmeConfig
-from ai_ml_research.rl.mbrl_pcme.metrics import MbrlPcmeOptimisationMetrics
+from ai_ml_research.rl.dpcme.config import DPCMEConfig
+from ai_ml_research.rl.dpcme.metrics import (
+    DPCMEOptimisationMetrics,
+)
 
 
-class MbrlPcmeAgent(Agent[MbrlPcmeOptimisationMetrics]):
+class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
     """Random-policy template exercising the Agent contract.
 
     Contains no algorithm-specific machinery: the policy draws uniform
@@ -20,8 +22,8 @@ class MbrlPcmeAgent(Agent[MbrlPcmeOptimisationMetrics]):
     def __init__(
         self,
         action_count: int,
-        config: MbrlPcmeConfig,
-        optimisation_metrics: MbrlPcmeOptimisationMetrics,
+        config: DPCMEConfig,
+        optimisation_metrics: DPCMEOptimisationMetrics,
     ) -> None:
         super().__init__(optimisation_metrics)
         self.action_count = action_count
