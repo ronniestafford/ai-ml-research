@@ -1,12 +1,23 @@
+from torch import optim
+from torch.nn.functional import mse_loss
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
-from ai_ml_research.rl.config import ExperimentConfig
+from ai_ml_research.rl.config import ExperimentConfig, OptimisationConfig
 from ai_ml_research.rl.experiment import run_experiment, setup
 from ai_ml_research.rl.dpcme.agent import DPCMEAgent
 from ai_ml_research.rl.dpcme.config import DPCMEConfig
 from ai_ml_research.rl.dpcme.metrics import (
     DPCMEOptimisationMetrics,
+)
+from ai_ml_research.rl.dpcme.transition_model.CME import (
+    CME,
+    CMEFunction,
+    PhiFunction,
+)
+from ai_ml_research.rl.dpcme.transition_model.config import CMEConfig
+from ai_ml_research.rl.dpcme.transition_model.metrics import (
+    CMEOptimisationMetrics,
 )
 
 
@@ -38,13 +49,65 @@ def main() -> None:
         epsilon_start=1.0,
         epsilon_end=0.01,
         epsilon_decay=10000,
-        # Optimisation
-        learning_rate=3e-4,
-        mini_batch_size=64,
-        optim_steps_per_transition=1,
         # Replay buffer
         replay_buffer_max_size=20000,
+    )
+    cme_config = CMEConfig(
+        # CME function: ψ (state-action features) then W
+        state_action_dim=state_dim + action_count,
+        psi_space_dim=64,
+        phi_space_dim=64,
+        hidden_dim=128,
+        hidden_layer_count=2,
+        # Random Fourier feature map φ: μ regresses onto φ's output space,
+        # so phi_space_dim is shared between the two.
+        phi_bandwidth=1.0,
+        # Optimisation
+        optimisation=OptimisationConfig(
+            learning_rate=3e-4,
+            mini_batch_size=64,
+            optim_steps_per_transition=1,
+        ),
+        max_grad_norm=10.0,
         warm_up_transition_count=max_transition_count * 2,
+    )
+
+    # [Performance] The environment is usually on the CPU,
+    # so keep replay buffer CPU-side. The agent fills it, the
+    # transition model samples it.
+    replay_buffer = TensorDictReplayBuffer(
+        storage=LazyTensorStorage(
+            config.replay_buffer_max_size, device=env_device
+        ),
+        batch_size=cme_config.optimisation.mini_batch_size,
+    )
+
+    # [Performance] Deep networks on GPU. φ is frozen but lives on the
+    # model device, so the regression target shares μ's device.
+    cme_function = CMEFunction(
+        state_action_dim=cme_config.state_action_dim,
+        psi_space_dim=cme_config.psi_space_dim,
+        phi_space_dim=cme_config.phi_space_dim,
+        hidden_dim=cme_config.hidden_dim,
+        hidden_layer_count=cme_config.hidden_layer_count,
+    ).to(model_device)
+    phi_function = PhiFunction(
+        state_dim=state_dim,
+        phi_space_dim=cme_config.phi_space_dim,
+        bandwidth=cme_config.phi_bandwidth,
+    ).to(model_device)
+
+    cme = CME(
+        cme_function=cme_function,
+        phi_function=phi_function,
+        optimiser=optim.Adam(
+            params=cme_function.parameters(),
+            lr=cme_config.optimisation.learning_rate,
+        ),
+        replay_buffer=replay_buffer,
+        loss_fn=mse_loss,
+        config=cme_config,
+        optimisation_metrics=CMEOptimisationMetrics(),
     )
 
     agent = DPCMEAgent(
@@ -52,14 +115,8 @@ def main() -> None:
         state_dim=state_dim,
         config=config,
         optimisation_metrics=DPCMEOptimisationMetrics(),
-        # [Performance] The environment is usually on the CPU,
-        # so keep replay buffer CPU-side.
-        replay_buffer=TensorDictReplayBuffer(
-            storage=LazyTensorStorage(
-                config.replay_buffer_max_size, device=env_device
-            ),
-            batch_size=config.mini_batch_size,
-        ),
+        replay_buffer=replay_buffer,
+        cme=cme,
     )
 
     run_experiment(env=env, agent=agent, config=experiment_config)

@@ -3,7 +3,7 @@ from torch.nn.functional import smooth_l1_loss
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
-from ai_ml_research.rl.config import ExperimentConfig
+from ai_ml_research.rl.config import ExperimentConfig, OptimisationConfig
 from ai_ml_research.rl.dqn.agent import (
     DQNAgent,
     QFunction,
@@ -40,10 +40,12 @@ def main() -> None:
     config = DQNConfig(
         # Discount rate for the Bellman target
         gamma=0.99,
-        # Optimisation
-        learning_rate=3e-4,
-        mini_batch_size=64,
-        optim_steps_per_transition=1,
+        # Optimisation of the Q function
+        optimisation=OptimisationConfig(
+            learning_rate=3e-4,
+            mini_batch_size=64,
+            optim_steps_per_transition=1,
+        ),
         # Q Functions
         hidden_dim=128,
         hidden_layer_count=2,
@@ -68,7 +70,7 @@ def main() -> None:
         storage=LazyTensorStorage(
             config.replay_buffer_max_size, device=env_device
         ),
-        batch_size=config.mini_batch_size,
+        batch_size=config.optimisation.mini_batch_size,
     )
 
     # [Performance] Deep networks on GPU.
@@ -82,7 +84,8 @@ def main() -> None:
     agent = DQNAgent(
         q_function=q_function,
         optimiser=optim.Adam(
-            params=q_function.parameters(), lr=config.learning_rate
+            params=q_function.parameters(),
+            lr=config.optimisation.learning_rate,
         ),
         replay_buffer=replay_buffer,
         loss_fn=smooth_l1_loss,

@@ -70,6 +70,12 @@ class TemplateAgent(Agent[TemplateOptimisationMetrics]):
         """Called after every transition; nothing to do for a random policy."""
 
     def format_metrics(self) -> str:
+        # super() renders the shared loss/gradient slice; the agent's own
+        # metrics are appended to it.
+        base = super().format_metrics()
+        if not base:
+            return ""
+
         metrics = self.optimisation_metrics
         # Tensor->Float parsing syncs host device with GPU data.
         # This is a performance hit, so only do here.
@@ -78,7 +84,7 @@ class TemplateAgent(Agent[TemplateOptimisationMetrics]):
         reward_rms = (float(metrics.reward_sq_sum) / element_count) ** 0.5
         last_reward = float(metrics.last_reward)
 
-        return (
+        return base + (
             f" │ avg_reward: {avg_reward:+.4f} │"
             f" reward_rms: {reward_rms:.4f} │"
             f" last_reward: {last_reward:+.4f}"

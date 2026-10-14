@@ -130,7 +130,7 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         self.config = config
 
         self.model_device = next(q_function.parameters()).device
-        self._n_grad_elements: int = q_function.get_param_count()
+        self._grad_element_count = q_function.get_param_count()
         self._transition_count: int = 0
         self._epsilon: float = config.epsilon_start
 
@@ -165,14 +165,16 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         if len(self.replay_buffer) <= self.config.warm_up_transition_count:
             return
 
-        for _ in range(self.config.optim_steps_per_transition):
+        for _ in range(self.config.optimisation.optim_steps_per_transition):
             # [Performance] Commit batch to GPU here,
             # nowhere else.
             minibatch = self.replay_buffer.sample(
                 batch_size=min(
-                    len(self.replay_buffer), self.config.mini_batch_size
+                    len(self.replay_buffer),
+                    self.config.optimisation.mini_batch_size,
                 )
             ).to(self.model_device)
+
             self._optimise_step(minibatch)
 
     def _optimise_step(self, minibatch: TensorDictBase) -> None:
@@ -235,7 +237,9 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         post_clip_norm: torch.Tensor = grad_norm.clamp(
             max=self.config.max_grad_norm
         )
-        grad_rms: torch.Tensor = post_clip_norm / self._n_grad_elements**0.5
+        grad_rms: torch.Tensor = (
+            post_clip_norm / self._grad_element_count**0.5
+        )
 
         self.optimiser.step()
 
@@ -291,13 +295,17 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         )
 
     def format_metrics(self) -> str:
+        base = super().format_metrics()
+        if not base:
+            return ""
+
         metrics = self.optimisation_metrics
         element_count = metrics.td_error_element_count
         avg_td_error = float(metrics.td_error_sum) / element_count
         td_error_rms = (float(metrics.td_error_sq_sum) / element_count) ** 0.5
         huber_share = float(metrics.td_error_in_huber_count) / element_count
 
-        return (
+        return base + (
             f" │ avg_td_error: {avg_td_error:+.4f} │"
             f" td_error_rms: {td_error_rms:.4f} │"
             f" |td_error|<β: {huber_share:.0%} │"

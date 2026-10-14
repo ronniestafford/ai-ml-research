@@ -1,7 +1,7 @@
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
-from ai_ml_research.rl.config import ExperimentConfig
+from ai_ml_research.rl.config import ExperimentConfig, OptimisationConfig
 from ai_ml_research.rl.experiment import run_experiment, setup
 from ai_ml_research.rl.template.agent import TemplateAgent
 from ai_ml_research.rl.template.config import TemplateConfig
@@ -33,14 +33,16 @@ def main() -> None:
     config = TemplateConfig(
         # Discount factor
         gamma=0.99,
+        # Optimisation
+        optimisation=OptimisationConfig(
+            learning_rate=3e-4,
+            mini_batch_size=64,
+            optim_steps_per_transition=1,
+        ),
         # Exploration
         epsilon_start=1.0,
         epsilon_end=0.01,
         epsilon_decay=10000,
-        # Optimisation
-        learning_rate=3e-4,
-        mini_batch_size=64,
-        optim_steps_per_transition=1,
         # Replay buffer
         replay_buffer_max_size=20000,
         warm_up_transition_count=max_transition_count * 2,
@@ -57,7 +59,7 @@ def main() -> None:
             storage=LazyTensorStorage(
                 config.replay_buffer_max_size, device=env_device
             ),
-            batch_size=config.mini_batch_size,
+            batch_size=config.optimisation.mini_batch_size,
         ),
     )
 
