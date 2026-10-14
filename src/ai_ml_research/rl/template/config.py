@@ -5,5 +5,11 @@ from ai_ml_research.rl.config import AgentConfig
 
 @dataclass(frozen=True)
 class TemplateConfig(AgentConfig):
-    """A random policy needs no hyperparameters of its own; extend
-    AgentConfig here with algorithm-specific fields."""
+    # Exploration
+    epsilon_start: float
+    epsilon_end: float
+    epsilon_decay: float
+
+    # Replay buffer
+    replay_buffer_max_size: int
+    warm_up_transition_count: int

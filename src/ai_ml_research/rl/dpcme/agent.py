@@ -1,8 +1,10 @@
 from dataclasses import replace
 
 import torch
+
 from torch.nn.functional import one_hot
 from tensordict import TensorDictBase
+from torchrl.data import TensorDictReplayBuffer
 
 from ai_ml_research.rl.agent import Agent
 from ai_ml_research.rl.dpcme.config import DPCMEConfig
@@ -12,22 +14,29 @@ from ai_ml_research.rl.dpcme.metrics import (
 
 
 class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
-    """Random-policy template exercising the Agent contract.
+    """Deep Parametic Conditional Mean Embedding (DPCME) agent.
 
-    Contains no algorithm-specific machinery: the policy draws uniform
-    random actions and the only state kept is the optimisation metrics,
-    which demonstrate the device-side and CPU-side metric idioms.
+    - Maintains a CME μ:SxA->Fϕ which is
+      an estimate for the expected next-state feature ϕ(S').
+    - μ(s,a) = Wψ(s,a) where ψ is the state-action feature.
     """
 
     def __init__(
         self,
         action_count: int,
+        state_dim: int,
         config: DPCMEConfig,
         optimisation_metrics: DPCMEOptimisationMetrics,
+        replay_buffer: TensorDictReplayBuffer,
     ) -> None:
         super().__init__(optimisation_metrics)
         self.action_count = action_count
+        self.state_dim = state_dim
         self.config = config
+        self.replay_buffer = replay_buffer
+
+        self._transition_count: int = 0
+        self._epsilon: float = config.epsilon_start
 
     def act(self, observation: torch.Tensor) -> torch.Tensor:
         # Uniform random action: keep on env device, one-hot to match
@@ -41,36 +50,41 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         return one_hot(action_idx, num_classes=self.action_count)
 
     def observe(self, transition: TensorDictBase) -> None:
+        self.replay_buffer.add(transition)
+        self._transition_count += 1
+
         metrics = self.optimisation_metrics
         reward: torch.Tensor = transition.get(("next", "reward"))
 
+        self._update_optimisation_metrics(metrics, reward)
+
+    def optimise(self) -> None:
+        if len(self.replay_buffer) <= self.config.warm_up_transition_count:
+            return
+
+    def _update_optimisation_metrics(
+        self, metrics: DPCMEOptimisationMetrics, reward: torch.Tensor
+    ):
         self.optimisation_metrics = replace(
             metrics,
             # [Performance] Device-side accumulation: no .item(),
-            # stays on the env device.
+            # thererfore variable stays on GPU device.
+            last_reward=reward,
             reward_sum=metrics.reward_sum + reward.sum(),
             reward_sq_sum=metrics.reward_sq_sum + reward.square().sum(),
-            # CPU-side data: plain host scalars. The float(reward) is a
-            # deliberate per-step host sync — shown as the contrast to
-            # the device-side accumulation above.
             reward_element_count=metrics.reward_element_count + 1,
-            last_reward=float(reward),
-            # Keeps print_metrics printing for a non-optimising agent.
             trajectory_step_count=metrics.trajectory_step_count + 1,
         )
 
-    def optimise(self) -> None:
-        """Called after every transition; nothing to do for a random policy."""
-
     def format_metrics(self) -> str:
         metrics = self.optimisation_metrics
-        # Single device → host sync of the trajectory's metrics.
         element_count = metrics.reward_element_count
         avg_reward = float(metrics.reward_sum) / element_count
         reward_rms = (float(metrics.reward_sq_sum) / element_count) ** 0.5
+        last_reward = float(metrics.last_reward)
 
         return (
             f" │ avg_reward: {avg_reward:+.4f} │"
             f" reward_rms: {reward_rms:.4f} │"
-            f" last_reward: {metrics.last_reward:+.4f}"
+            f" last_reward: {last_reward:+.4f}"
         )

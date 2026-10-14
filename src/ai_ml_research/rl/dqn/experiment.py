@@ -14,6 +14,10 @@ from ai_ml_research.rl.experiment import run_experiment, setup
 
 
 def main() -> None:
+    """
+    Learns optimal policy in ~50,000-70,000 samples.
+    """
+
     # Hardware and seed
     seed, model_device, env_device = setup()
 
@@ -25,13 +29,6 @@ def main() -> None:
     action_count: int = env.action_spec.shape[-1]
     # Discount rate for the experiment's evaluated returns metric
     evaluation_gamma: float = 0.99
-
-    print(f"MAX_TRANSITION_COUNT: {max_transition_count}")
-    print(f"Action count: {action_count}")
-    print(f"observation_spec: {env.observation_spec}")
-    print(f"action_spec: {env.action_spec}")
-    print(f"reward_spec: {env.reward_spec}")
-    print(f"done_spec: {env.done_spec}")
 
     experiment_config = ExperimentConfig(
         seed=seed,
