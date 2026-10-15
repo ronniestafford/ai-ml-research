@@ -1,6 +1,4 @@
 from abc import ABC, abstractmethod
-from dataclasses import fields, replace
-from typing import Any, Generic, TypeVar
 
 import numpy as np
 import torch
@@ -8,13 +6,9 @@ from tensordict import TensorDictBase
 
 from ai_ml_research.rl.metrics import (
     GlobalMetrics,
-    OptimisationMetrics,
     TrajectoryMetrics,
 )
-
-# OptimisationMetrics can be specialised to type T
-# e.g. DQNAgent inherits Agent[DQNOptimisationMetrics].
-T = TypeVar("T", bound=OptimisationMetrics)
+from ai_ml_research.rl.optimisable import T, Optimisable
 
 
 def get_epsilon_exp_decay(
@@ -40,7 +34,7 @@ def get_epsilon_linear_decay(
     )
 
 
-class Agent(ABC, Generic[T]):
+class Agent(Optimisable[T], ABC):
     """Contract between an RL agent and the generic experiment runner.
 
     The runner steps the environment and calls the agent once per
@@ -49,10 +43,11 @@ class Agent(ABC, Generic[T]):
     transition (replay buffer, trajectory accumulator, ...), when
     and how to take optimisation steps, and the optimisation
     metrics themselves.
-    """
 
-    def __init__(self, optimisation_metrics: T) -> None:
-        self.optimisation_metrics: T = optimisation_metrics
+    An agent is itself an Optimisable and may compose further
+    Optimisable components (a transition model, an encoder, ...) whose
+    lifecycle hooks and metrics it drives; see sub_optimisables().
+    """
 
     @abstractmethod
     def act(self, observation: torch.Tensor) -> torch.Tensor:
@@ -62,20 +57,19 @@ class Agent(ABC, Generic[T]):
     def observe(self, transition: TensorDictBase) -> None:
         """Store the full transition just produced by env.step()."""
 
-    @abstractmethod
-    def optimise(self) -> None:
-        """Called after every transition."""
+    def sub_optimisables(self) -> tuple[Optimisable, ...]:
+        """Optimisable components owned by this agent (none by default)."""
+        return ()
+
+    def optimisation_components(self) -> tuple[Optimisable, ...]:
+        """Every optimisable contributing to this agent's metric line."""
+        return (self, *self.sub_optimisables())
 
     def on_trajectory_start(self) -> None:
         """Called before env.reset() of each trajectory."""
-        # field.default is Any-typed; every metrics field declares one,
-        # so annotating the dict keeps replace() happy.
-        reset: dict[str, Any] = {
-            field.name: field.default
-            for field in fields(self.optimisation_metrics)
-            if field.name != "optim_step_count"
-        }
-        self.optimisation_metrics = replace(self.optimisation_metrics, **reset)
+        super().on_trajectory_start()
+        for component in self.sub_optimisables():
+            component.on_trajectory_start()
 
     def on_trajectory_end(self) -> None:
         """Called when the trajectory is done, before metrics are printed.
@@ -83,10 +77,8 @@ class Agent(ABC, Generic[T]):
         Typically where on-policy agents run their updates over the collected
         trajectory.
         """
-
-    def format_metrics(self) -> str:
-        """Agent-specific suffix appended to the trajectory's metric line."""
-        return ""
+        for component in self.sub_optimisables():
+            component.on_trajectory_end()
 
     def print_metrics(
         self,
@@ -94,32 +86,26 @@ class Agent(ABC, Generic[T]):
         metrics_global: GlobalMetrics,
         metrics_trajectory: TrajectoryMetrics,
     ) -> None:
-        metrics_optimisation = self.optimisation_metrics
-        if metrics_optimisation.trajectory_step_count > 0:
-            # Single device → host sync for the whole trajectory's metrics.
-            step_count = metrics_optimisation.trajectory_step_count
-            avg_loss = float(metrics_optimisation.loss_sum) / step_count
-            avg_grad_norm = (
-                float(metrics_optimisation.grad_norm_sum) / step_count
-            )
-            avg_grad_rms = (
-                float(metrics_optimisation.grad_rms_sum) / step_count
-            )
+        components = self.optimisation_components()
+        if all(
+            c.optimisation_metrics.trajectory_step_count == 0
+            for c in components
+        ):
+            return
 
-            discounted_reward = metrics_trajectory.discounted_reward
-            transition_count = metrics_trajectory.transition_count
-            total_transitions = metrics_global.transition_count
-            total_optim_steps = metrics_optimisation.optim_step_count
+        discounted_reward = metrics_trajectory.discounted_reward
+        transition_count = metrics_trajectory.transition_count
+        total_transitions = metrics_global.transition_count
+        total_optim_steps = sum(
+            c.optimisation_metrics.optim_step_count for c in components
+        )
 
-            line = (
-                f"Trajectory {trajectory_idx} │"
-                f" discounted reward: {discounted_reward:.4f} │"
-                f" transitions: {transition_count} │"
-                f" total transitions: {total_transitions} │"
-                f" total optim steps: {total_optim_steps} │"
-                f" avg_loss: {avg_loss:.4f} │"
-                f" avg_grad_norm: {avg_grad_norm:.4f} │"
-                f" avg_grad_rms: {avg_grad_rms:.6f}"
-            )
-            line += self.format_metrics()
-            print(line)
+        line = (
+            f"Trajectory {trajectory_idx} │"
+            f" discounted reward: {discounted_reward:.4f} │"
+            f" transitions: {transition_count} │"
+            f" total transitions: {total_transitions} │"
+            f" total optim steps: {total_optim_steps} │"
+        )
+        line += "".join(c.format_metrics() for c in components)
+        print(line)

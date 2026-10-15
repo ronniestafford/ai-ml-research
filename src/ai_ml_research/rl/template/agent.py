@@ -3,6 +3,7 @@ from dataclasses import replace
 import torch
 from torch.nn.functional import one_hot
 from tensordict import TensorDictBase
+from torchrl.data import TensorDictReplayBuffer
 
 from ai_ml_research.rl.agent import Agent
 from ai_ml_research.rl.template.config import TemplateConfig
@@ -20,12 +21,19 @@ class TemplateAgent(Agent[TemplateOptimisationMetrics]):
     def __init__(
         self,
         action_count: int,
+        state_dim: int,
         config: TemplateConfig,
         optimisation_metrics: TemplateOptimisationMetrics,
+        replay_buffer: TensorDictReplayBuffer,
     ) -> None:
         super().__init__(optimisation_metrics)
         self.action_count = action_count
+        self.state_dim = state_dim
         self.config = config
+        self.replay_buffer = replay_buffer
+
+        self._transition_count: int = 0
+        self._epsilon: float = config.epsilon_start
 
     def act(self, observation: torch.Tensor) -> torch.Tensor:
         # Uniform random action: keep on env device, one-hot to match
@@ -42,18 +50,19 @@ class TemplateAgent(Agent[TemplateOptimisationMetrics]):
         metrics = self.optimisation_metrics
         reward: torch.Tensor = transition.get(("next", "reward"))
 
+        self._update_optimisation_metrics(metrics, reward)
+
+    def _update_optimisation_metrics(
+        self, metrics: TemplateOptimisationMetrics, reward: torch.Tensor
+    ):
         self.optimisation_metrics = replace(
             metrics,
             # [Performance] Device-side accumulation: no .item(),
-            # stays on the env device.
+            # thererfore variable stays on GPU device.
+            last_reward=reward,
             reward_sum=metrics.reward_sum + reward.sum(),
             reward_sq_sum=metrics.reward_sq_sum + reward.square().sum(),
-            # CPU-side data: plain host scalars. The float(reward) is a
-            # deliberate per-step host sync — shown as the contrast to
-            # the device-side accumulation above.
             reward_element_count=metrics.reward_element_count + 1,
-            last_reward=float(reward),
-            # Keeps print_metrics printing for a non-optimising agent.
             trajectory_step_count=metrics.trajectory_step_count + 1,
         )
 
@@ -61,14 +70,22 @@ class TemplateAgent(Agent[TemplateOptimisationMetrics]):
         """Called after every transition; nothing to do for a random policy."""
 
     def format_metrics(self) -> str:
+        # super() renders the shared loss/gradient slice; the agent's own
+        # metrics are appended to it.
+        base = super().format_metrics()
+        if not base:
+            return ""
+
         metrics = self.optimisation_metrics
-        # Single device → host sync of the trajectory's metrics.
+        # Tensor->Float parsing syncs host device with GPU data.
+        # This is a performance hit, so only do here.
         element_count = metrics.reward_element_count
         avg_reward = float(metrics.reward_sum) / element_count
         reward_rms = (float(metrics.reward_sq_sum) / element_count) ** 0.5
+        last_reward = float(metrics.last_reward)
 
-        return (
+        return base + (
             f" │ avg_reward: {avg_reward:+.4f} │"
             f" reward_rms: {reward_rms:.4f} │"
-            f" last_reward: {metrics.last_reward:+.4f}"
+            f" last_reward: {last_reward:+.4f}"
         )

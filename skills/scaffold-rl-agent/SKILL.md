@@ -51,12 +51,29 @@ contract. When implementing the real algorithm:
 - `agent.py`: keep the `Agent` subclass contract (`act`, `observe`,
   `optimise`, `format_metrics`); rewrite the class docstring to describe
   the actual algorithm. Keep the device-side vs CPU-side metric idioms.
+  `format_metrics` MUST chain `super().format_metrics()` and return `""`
+  when the base is empty — the base prints `avg_loss`/`avg_grad_norm`/
+  `avg_grad_rms`, so overriding without chaining silently drops them.
+- `agent.py` (trainable sub-components): if the algorithm owns a second
+  thing with parameters, wrap it as an `Optimisable` (see
+  `rl/dpcme/transition_model/CME.py`), inject it in `__init__` and list it
+  in `sub_optimisables()`. Trajectory resets, `optimise()` cadence and
+  metric printing then cover it automatically. `nn.Module` siblings stay
+  dumb (`forward`, `get_param_count`) — optimiser, metrics and `optimise`
+  live on the `Optimisable` wrapper, which is built in `experiment.py`
+  after the modules are `.to(model_device)`.
 - `config.py`: add algorithm hyperparameters to `<ClassName>Config`
   (it extends `AgentConfig`; `gamma` there is the Bellman-target discount,
   NOT the evaluation discount which lives in `ExperimentConfig`).
+  Optimiser hyperparameters live in `OptimisationConfig`
+  (`learning_rate`, `mini_batch_size`, `optim_steps_per_transition`),
+  embedded as an `optimisation` field on whichever config actually takes
+  the gradient step — the agent's, or its component's.
 - `metrics.py`: new fields MUST declare a default —
-  `Agent.on_trajectory_start` resets every field to `field.default`.
-- `experiment.py`: hyperparameters live here; note it carries two distinct
+  `Optimisable.on_trajectory_start` resets every field to `field.default`.
+  Subclass `OptimisationMetrics` to inherit the loss/grad accumulators.
+- `experiment.py`: hyperparameters live here, including the nested
+  `optimisation=OptimisationConfig(...)`; note it carries two distinct
   discounts: `evaluation_gamma` (→ `ExperimentConfig`, returns metric) and
   the agent-config `gamma` (→ Bellman target). Keep them separate.
 
