@@ -19,3 +19,8 @@ Reproducing some old results and experimenting with the new.
 
 - [Template](src/ai_ml_research/rl/template/), scaffolding for creating new agents and experiments.
 - [Vanilla DQN](src/ai_ml_research/rl/dqn), implementation of DeepMind's famous deep Q-learning paper on a small low dimensional state-space MDP.
+- [DPCME](src/ai_ml_research/rl/dpcme/), deep model-based approximate policy iteration algorithm with Bellman residual minimisation to fit the value function proposed in my [1].
+
+
+## Bibliography
+[1]: Stafford, R. (2020). *Improving the Practicality of Model-Based Reinforcement Learning: An Investigation into Scaling up Model-Based Methods in Online Settings*, [Section 4.5.1](https://discovery.ucl.ac.uk/id/eprint/10089835/3/Stafford_10089835_thesis.pdf#page=124) PhD thesis, University College London.
