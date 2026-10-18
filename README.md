@@ -15,8 +15,6 @@ Reproducing some old results and experimenting with the new.
 - [Backprop](knowledge_base/2_theory_snippets/backprop.md)
 
 
-
-
 ## Experiments
 
 - [Template](src/ai_ml_research/rl/template/), scaffolding for creating new agents and experiments.

@@ -1,0 +1,24 @@
+# syntax=docker/sandbox-kit:3
+schemaVersion: "3"
+kind: workload
+displayName: "opencode-sbx-ai-ml-research-agent"
+
+# Declare `workspace_dir` argument.
+args:
+  workspace_dir:
+    required: true
+    description: Absolute host path of the workspace as mounted into the sandbox.
+
+capabilities:
+  - type: com.docker.sandbox/sbx@1
+
+  - type: com.docker.sandbox/network-policy@1
+    config:
+        runtime:
+          allow:
+            - pypi.org
+            - files.pythonhosted.org
+            - github.com
+            # pyenv install fetches CPython sources from python.org's FTP-over-HTTPS
+            - python.org
+            - www.python.org
