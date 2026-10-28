@@ -13,11 +13,18 @@ RUN printf '%s\n' \
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
-    libssl-dev \
-    zlib1g-dev \
-    libsqlite3-dev \
     curl \
-    ca-certificates \
+    git \
+    libbz2-dev \
+    liblzma-dev \
+    libssl-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    libreadline-dev \
+    pkg-config \
+    uuid-dev \
+    xz-utils \
+    zlib1g-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # 2. Configure uv and install it as the agent user
