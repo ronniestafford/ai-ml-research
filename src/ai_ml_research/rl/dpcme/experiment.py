@@ -3,7 +3,9 @@ from torch.nn.functional import mse_loss
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
-from ai_ml_research.rl.config import ExperimentConfig, OptimisationConfig
+from ai_ml_research.rl.config import ExperimentConfig
+from ai_ml_research.rl.dpcme.transition_model.CME import MuFunction
+from ai_ml_research.rl.dpcme.value_function.state_value import PhiFunction
 from ai_ml_research.rl.experiment import run_experiment, setup
 from ai_ml_research.rl.dpcme.agent import DPCMEAgent
 from ai_ml_research.rl.dpcme.config import DPCMEConfig
@@ -12,10 +14,11 @@ from ai_ml_research.rl.dpcme.metrics import (
 )
 from ai_ml_research.rl.dpcme.transition_model.CME import (
     CME,
-    CMEFunction,
-    PhiFunction,
 )
-from ai_ml_research.rl.dpcme.transition_model.config import CMEConfig
+from ai_ml_research.rl.dpcme.transition_model.config import (
+    CMEConfig,
+    CMEOptimisationConfig,
+)
 from ai_ml_research.rl.dpcme.transition_model.metrics import (
     CMEOptimisationMetrics,
 )
@@ -40,7 +43,7 @@ def main() -> None:
         model_device=model_device,
         env_device=env_device,
         gamma=evaluation_gamma,
-        trajectory_count=5,
+        trajectory_count=100,
     )
     config = DPCMEConfig(
         # Discount factor
@@ -62,14 +65,13 @@ def main() -> None:
         # Random Fourier feature map φ: μ regresses onto φ's output space,
         # so phi_space_dim is shared between the two.
         phi_bandwidth=1.0,
-        # Optimisation
-        optimisation=OptimisationConfig(
+        optimisation=CMEOptimisationConfig(
             learning_rate=3e-4,
             mini_batch_size=64,
-            optim_steps_per_transition=1,
+            optim_steps_per_transition=10,
+            max_grad_norm=10.0,
+            warm_up_transition_count=max_transition_count * 2,
         ),
-        max_grad_norm=10.0,
-        warm_up_transition_count=max_transition_count * 2,
     )
 
     # [Performance] The environment is usually on the CPU,
@@ -84,13 +86,14 @@ def main() -> None:
 
     # [Performance] Deep networks on GPU. φ is frozen but lives on the
     # model device, so the regression target shares μ's device.
-    cme_function = CMEFunction(
+    cme_function = MuFunction(
         state_action_dim=cme_config.state_action_dim,
         psi_space_dim=cme_config.psi_space_dim,
         phi_space_dim=cme_config.phi_space_dim,
         hidden_dim=cme_config.hidden_dim,
         hidden_layer_count=cme_config.hidden_layer_count,
     ).to(model_device)
+
     phi_function = PhiFunction(
         state_dim=state_dim,
         phi_space_dim=cme_config.phi_space_dim,
@@ -119,7 +122,7 @@ def main() -> None:
         cme=cme,
     )
 
-    run_experiment(env=env, agent=agent, config=experiment_config)
+    run_experiment(mdp=env, agent=agent, config=experiment_config)
 
 
 if __name__ == "__main__":

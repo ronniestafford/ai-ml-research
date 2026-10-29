@@ -94,7 +94,7 @@ def main() -> None:
         optimisation_metrics=DQNOptimisationMetrics(),
     )
 
-    run_experiment(env=env, agent=agent, config=experiment_config)
+    run_experiment(mdp=env, agent=agent, config=experiment_config)
 
 
 if __name__ == "__main__":

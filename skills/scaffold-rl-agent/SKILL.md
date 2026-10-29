@@ -56,7 +56,7 @@ contract. When implementing the real algorithm:
   `avg_grad_rms`, so overriding without chaining silently drops them.
 - `agent.py` (trainable sub-components): if the algorithm owns a second
   thing with parameters, wrap it as an `Optimisable` (see
-  `rl/dpcme/transition_model/CME.py`), inject it in `__init__` and list it
+  `rl/dpcme/optimisable/CME.py`), inject it in `__init__` and list it
   in `sub_optimisables()`. Trajectory resets, `optimise()` cadence and
   metric printing then cover it automatically. `nn.Module` siblings stay
   dumb (`forward`, `get_param_count`) — optimiser, metrics and `optimise`

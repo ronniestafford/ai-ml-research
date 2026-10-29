@@ -33,7 +33,7 @@ def setup() -> tuple[int, torch.device, torch.device]:
 
 
 def run_experiment(
-    env: GymEnv,
+    mdp: GymEnv,
     agent: Agent,
     config: ExperimentConfig,
 ) -> GlobalMetrics:
@@ -44,14 +44,14 @@ def run_experiment(
         metrics_trajectory = TrajectoryMetrics()
         agent.on_trajectory_start()
 
-        proto_transition = env.reset()
+        proto_transition = mdp.reset()
         done = False
 
         while not done:
             proto_transition.set(
                 "action", agent.act(proto_transition.get("observation"))
             )
-            full_transition = env.step(proto_transition)
+            full_transition = mdp.step(proto_transition)
             agent.observe(full_transition)
 
             reward: float = full_transition.get(("next", "reward")).item()

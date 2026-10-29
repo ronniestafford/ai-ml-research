@@ -7,6 +7,7 @@ from torch import nn, optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
+from ai_ml_research.rl.dpcme.value_function.state_value import PhiFunction
 from ai_ml_research.rl.dpcme.transition_model.config import CMEConfig
 from ai_ml_research.rl.dpcme.transition_model.metrics import (
     CMEOptimisationMetrics,
@@ -14,7 +15,12 @@ from ai_ml_research.rl.dpcme.transition_model.metrics import (
 from ai_ml_research.rl.optimisable import Optimisable
 
 
-class CMEFunction(nn.Module):
+class MuFunction(nn.Module):
+    """
+    - CME μ:SxA->Fϕ is the expected next-state feature ϕ(S').
+    - μ(s,a) = Wψ(s,a) where ψ is the state-action feature.
+    """
+
     def __init__(
         self,
         state_action_dim: int,
@@ -34,7 +40,7 @@ class CMEFunction(nn.Module):
 
         layers.append(nn.Linear(hidden_dim, psi_space_dim))
         layers.append(nn.ReLU())
-
+        self.psi_layer = layers[-1]
         layers.append(nn.Linear(psi_space_dim, phi_space_dim))
 
         self.network = nn.Sequential(*layers)
@@ -44,37 +50,6 @@ class CMEFunction(nn.Module):
 
     def get_param_count(self) -> int:
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-
-class PhiFunction(nn.Module):
-    """Fixed random Fourier feature map φ: R^state_dim -> R^phi_space_dim.
-
-    φ(s) = √(2/d) · cos(Ws + b) with W_ij ~ N(0, 1/bandwidth²) and
-    b_i ~ U(0, 2π), so ⟨φ(s), φ(s')⟩ estimates the RBF kernel k(s, s')
-    and ‖φ(s)‖ ≈ 1.
-
-    φ defines the space the CME regresses onto, it is not learned:
-    the projection is frozen and forward runs without a graph.
-    """
-
-    def __init__(
-        self,
-        state_dim: int,
-        phi_space_dim: int,
-        bandwidth: float,
-    ) -> None:
-        super().__init__()
-
-        self.normalisation: float = (2.0 / phi_space_dim) ** 0.5
-
-        projection = nn.Linear(state_dim, phi_space_dim)
-        with torch.no_grad():
-            projection.weight.normal_(mean=0.0, std=1.0 / bandwidth)
-            projection.bias.uniform_(0.0, 2.0 * torch.pi)
-        self.projection = projection.requires_grad_(False)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.normalisation * torch.cos(self.projection(x))
 
 
 class CME(Optimisable[CMEOptimisationMetrics]):
@@ -87,13 +62,13 @@ class CME(Optimisable[CMEOptimisationMetrics]):
         minimise  ‖μ_θ(s,a) − φ(s')‖²  over transitions in the buffer
 
     whose minimiser is the conditional mean E[φ(S') | s,a]. The buffer is
-    shared with the agent that owns this component: observe() on the agent
+    shared with the agent that owns this component: observe() on the agents
     fills it, optimise() here consumes it.
     """
 
     def __init__(
         self,
-        cme_function: CMEFunction,
+        cme_function: MuFunction,
         phi_function: PhiFunction,
         optimiser: optim.Optimizer,
         replay_buffer: TensorDictReplayBuffer,
@@ -114,7 +89,10 @@ class CME(Optimisable[CMEOptimisationMetrics]):
         self._grad_element_count = cme_function.get_param_count()
 
     def optimise(self) -> None:
-        if len(self.replay_buffer) <= self.config.warm_up_transition_count:
+        if (
+            len(self.replay_buffer)
+            <= self.config.optimisation.warm_up_transition_count
+        ):
             return
 
         for _ in range(self.config.optimisation.optim_steps_per_transition):
@@ -151,23 +129,22 @@ class CME(Optimisable[CMEOptimisationMetrics]):
         loss.backward()
 
         grad_norm: torch.Tensor = torch.nn.utils.clip_grad_norm_(
-            self.cme_function.parameters(), max_norm=self.config.max_grad_norm
+            self.cme_function.parameters(),
+            max_norm=self.config.optimisation.max_grad_norm,
         )
         post_clip_norm: torch.Tensor = grad_norm.clamp(
-            max=self.config.max_grad_norm
+            max=self.config.optimisation.max_grad_norm
         )
-        grad_rms: torch.Tensor = (
-            post_clip_norm / self._grad_element_count**0.5
-        )
+        grad_rms: torch.Tensor = post_clip_norm / self._grad_element_count**0.5
 
         self.optimiser.step()
 
         with torch.no_grad():
             # Per-step means, so the trajectory averages are means too.
             mu_norm_sq: torch.Tensor = mu.detach().square().sum(dim=-1).mean()
-            phi_norm_sq: torch.Tensor = phi_successor.square().sum(
-                dim=-1
-            ).mean()
+            phi_norm_sq: torch.Tensor = (
+                phi_successor.square().sum(dim=-1).mean()
+            )
 
         self._update_optimisation_metrics(
             metrics,

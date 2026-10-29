@@ -1,6 +1,13 @@
 from dataclasses import dataclass
 
-from ai_ml_research.rl.config import OptimisationConfig
+
+@dataclass(frozen=True)
+class CMEOptimisationConfig:
+    learning_rate: float
+    mini_batch_size: int
+    optim_steps_per_transition: int
+    max_grad_norm: float
+    warm_up_transition_count: int
 
 
 @dataclass(frozen=True)
@@ -17,6 +24,4 @@ class CMEConfig:
     phi_bandwidth: float
 
     # Optimisation
-    optimisation: OptimisationConfig
-    max_grad_norm: float
-    warm_up_transition_count: int
+    optimisation: CMEOptimisationConfig

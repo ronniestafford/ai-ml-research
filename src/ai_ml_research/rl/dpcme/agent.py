@@ -65,26 +65,17 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         self.replay_buffer.add(transition)
         self._transition_count += 1
 
-        metrics = self.optimisation_metrics
-        reward: torch.Tensor = transition.get(("next", "reward"))
+        # reward: torch.Tensor = transition.get(("next", "reward"))
 
-        self._update_optimisation_metrics(metrics, reward)
+        self._update_optimisation_metrics(self.optimisation_metrics)
 
     def optimise(self) -> None:
-        # Cadence only: the component gates on its own warm-up.
         self.cme.optimise()
 
-    def _update_optimisation_metrics(
-        self, metrics: DPCMEOptimisationMetrics, reward: torch.Tensor
-    ):
+    def _update_optimisation_metrics(self, metrics: DPCMEOptimisationMetrics):
         self.optimisation_metrics = replace(
             metrics,
-            # [Performance] Device-side accumulation: no .item(),
-            # thererfore variable stays on GPU device.
-            last_reward=reward,
-            reward_sum=metrics.reward_sum + reward.sum(),
-            reward_sq_sum=metrics.reward_sq_sum + reward.square().sum(),
-            reward_element_count=metrics.reward_element_count + 1,
+            optim_step_count=metrics.optim_step_count + 1,
             trajectory_step_count=metrics.trajectory_step_count + 1,
         )
 
@@ -93,14 +84,8 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         if not base:
             return ""
 
+        # NOT SURE WHAT METRICS SHOULD BE IN HERE!
         metrics = self.optimisation_metrics
-        element_count = metrics.reward_element_count
-        avg_reward = float(metrics.reward_sum) / element_count
-        reward_rms = (float(metrics.reward_sq_sum) / element_count) ** 0.5
         last_reward = float(metrics.last_reward)
 
-        return base + (
-            f" │ avg_reward: {avg_reward:+.4f} │"
-            f" reward_rms: {reward_rms:.4f} │"
-            f" last_reward: {last_reward:+.4f}"
-        )
+        return base + (f" last_reward: {last_reward:+.4f}")
