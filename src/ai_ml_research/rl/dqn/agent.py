@@ -1,4 +1,5 @@
 import copy
+import random
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -54,27 +55,40 @@ def get_epsilon_greedy_action(
         observation = observation.unsqueeze(0)
 
     observation_count = observation.shape[0]
-    random_mask = torch.rand(observation_count, device=env_device) < epsilon
-    action_idx = torch.randint(
-        0, action_count, (observation_count,), device=env_device
-    )
-
-    # [Performance] Greedy actions: forward pass and greedy action indexes
-    # calculated on the model's device. Final action indexes calculated on the
-    # env device.
-    if not random_mask.all():
+    # [Performance] The ε coins are drawn from the Python RNG (seeded
+    # in setup): a device-tensor `if`/`.all()` would be an implicit
+    # .item() — one sync per act on a GPU env.
+    random_choices = [
+        random.random() < epsilon for _ in range(observation_count)
+    ]
+    if all(random_choices):
+        action_idx = torch.randint(
+            0, action_count, (observation_count,), device=env_device
+        )
+    else:
+        # [Performance] Greedy actions: forward pass and greedy action
+        # indexes calculated on the model's device. Final action
+        # indexes calculated on the env device.
         model_device = next(q_function.parameters()).device
         with torch.no_grad():
             # [Performance] Keep on model device
             greedy_idx = q_function(observation.to(model_device)).argmax(
                 dim=-1
             )
-        # [Performance] Final action indexes: calculate on env device,
-        # inhibit CPU sync with torch.where, just in case env_device
-        # is GPU-based.
-        action_idx = torch.where(
-            random_mask, action_idx, greedy_idx.to(env_device)
-        )
+        if any(random_choices):
+            random_mask = torch.tensor(random_choices, device=env_device)
+            # [Performance] Random actions: keep on env device
+            random_idx = torch.randint(
+                0, action_count, (observation_count,), device=env_device
+            )
+            # [Performance] Final action indexes: calculate on env device,
+            # inhibit CPU sync with torch.where, just in case env_device
+            # is GPU-based.
+            action_idx = torch.where(
+                random_mask, random_idx, greedy_idx.to(env_device)
+            )
+        else:
+            action_idx = greedy_idx.to(env_device)
 
     action_one_hot = one_hot(action_idx, num_classes=action_count)
 
@@ -118,10 +132,10 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         optimisation_metrics: DQNOptimisationMetrics,
     ) -> None:
         super().__init__(optimisation_metrics)
-        self.q_function = q_function
+        self.q_function = q_function  # Online Q function
         self.target_q_function = copy.deepcopy(q_function).requires_grad_(
             False
-        )
+        )  # Target Q function (bootstrapped learning target)
         self.target_q_function.eval()
         self.optimiser = optimiser
         self.replay_buffer = replay_buffer
@@ -130,7 +144,7 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         self.config = config
 
         self.model_device = next(q_function.parameters()).device
-        self._n_grad_elements: int = q_function.get_param_count()
+        self._grad_element_count = q_function.get_param_count()
         self._transition_count: int = 0
         self._epsilon: float = config.epsilon_start
 
@@ -147,6 +161,9 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         )
 
     def act(self, observation: torch.Tensor) -> torch.Tensor:
+        """
+        Behaviour (exploration) epsilon-greedy policy from online Q function
+        """
         return get_epsilon_greedy_action(
             q_function=self.q_function,
             observation=observation,
@@ -162,14 +179,16 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         if len(self.replay_buffer) <= self.config.warm_up_transition_count:
             return
 
-        for _ in range(self.config.optim_steps_per_transition):
+        for _ in range(self.config.optimisation.optim_steps_per_transition):
             # [Performance] Commit batch to GPU here,
             # nowhere else.
             minibatch = self.replay_buffer.sample(
                 batch_size=min(
-                    len(self.replay_buffer), self.config.mini_batch_size
+                    len(self.replay_buffer),
+                    self.config.optimisation.mini_batch_size,
                 )
             ).to(self.model_device)
+
             self._optimise_step(minibatch)
 
     def _optimise_step(self, minibatch: TensorDictBase) -> None:
@@ -232,7 +251,9 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         post_clip_norm: torch.Tensor = grad_norm.clamp(
             max=self.config.max_grad_norm
         )
-        grad_rms: torch.Tensor = post_clip_norm / self._n_grad_elements**0.5
+        grad_rms: torch.Tensor = (
+            post_clip_norm / self._grad_element_count**0.5
+        )
 
         self.optimiser.step()
 
@@ -288,13 +309,17 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
         )
 
     def format_metrics(self) -> str:
+        base = super().format_metrics()
+        if not base:
+            return ""
+
         metrics = self.optimisation_metrics
         element_count = metrics.td_error_element_count
         avg_td_error = float(metrics.td_error_sum) / element_count
         td_error_rms = (float(metrics.td_error_sq_sum) / element_count) ** 0.5
         huber_share = float(metrics.td_error_in_huber_count) / element_count
 
-        return (
+        return base + (
             f" │ avg_td_error: {avg_td_error:+.4f} │"
             f" td_error_rms: {td_error_rms:.4f} │"
             f" |td_error|<β: {huber_share:.0%} │"

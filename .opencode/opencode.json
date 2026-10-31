@@ -2,14 +2,9 @@
   "$schema": "https://opencode.ai/config.json",
   "model": "llama.cpp/unsloth/Qwen3.8-Flash-Next-GGUF:UD-IQ4_XS",
   "skills": {
-    "paths": ["skills"]
-  },
-  "permission": {
-    "bash": {
-      "uv *": "deny",
-      "pip *": "deny",
-      "pip3 *": "deny"
-    }
+    "paths": [
+      "skills"
+    ]
   },
   "provider": {
     "llama.cpp": {
@@ -39,7 +34,7 @@
             "context": 131072,
             "output": 32768
           }
-        },
+        }
       }
     }
   }

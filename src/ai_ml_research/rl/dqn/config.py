@@ -1,10 +1,13 @@
 from dataclasses import dataclass
 
-from ai_ml_research.rl.config import AgentConfig
+from ai_ml_research.rl.config import AgentConfig, OptimisationConfig
 
 
 @dataclass(frozen=True)
 class DQNConfig(AgentConfig):
+    # Optimisation of the Q function
+    optimisation: OptimisationConfig
+
     # Q Functions
     hidden_dim: int
     hidden_layer_count: int

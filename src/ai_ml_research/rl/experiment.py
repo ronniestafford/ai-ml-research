@@ -7,7 +7,11 @@ from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.agent import Agent
 from ai_ml_research.rl.config import ExperimentConfig
-from ai_ml_research.rl.metrics import GlobalMetrics, TrajectoryMetrics
+from ai_ml_research.rl.metrics import (
+    GlobalMetrics,
+    Scalar,
+    TrajectoryMetrics,
+)
 
 
 def setup() -> tuple[int, torch.device, torch.device]:
@@ -33,7 +37,7 @@ def setup() -> tuple[int, torch.device, torch.device]:
 
 
 def run_experiment(
-    env: GymEnv,
+    mdp: GymEnv,
     agent: Agent,
     config: ExperimentConfig,
 ) -> GlobalMetrics:
@@ -44,17 +48,21 @@ def run_experiment(
         metrics_trajectory = TrajectoryMetrics()
         agent.on_trajectory_start()
 
-        proto_transition = env.reset()
+        proto_transition = mdp.reset()
         done = False
 
         while not done:
             proto_transition.set(
                 "action", agent.act(proto_transition.get("observation"))
             )
-            full_transition = env.step(proto_transition)
+            full_transition = mdp.step(proto_transition)
             agent.observe(full_transition)
 
-            reward: float = full_transition.get(("next", "reward")).item()
+            # [Performance] Device-side accumulation: the reward stays
+            # a 0-dim tensor (no .item()); it is converted once per
+            # trajectory when print_metrics formats it. The only
+            # per-transition sync left is the done check below.
+            reward: Scalar = full_transition.get(("next", "reward")).squeeze()
             metrics_trajectory = replace(
                 metrics_trajectory,
                 discounted_reward=metrics_trajectory.discounted_reward

@@ -8,12 +8,7 @@ from ai_ml_research.rl.metrics import (
 
 @dataclass(frozen=True)
 class TemplateOptimisationMetrics(OptimisationMetrics):
-    # Every new field must declare a default: Agent.on_trajectory_start
-    # resets all fields (except optim_step_count) to their field.default.
-
-    # Device-side accumulation: updated in TemplateAgent.observe() with
-    # device tensors — no .item() — so these stay on (and grow on) the
-    # env/compute device. The single host sync happens in format_metrics.
+    # GPU-side data: Stay on (and grow on) the env/compute device.
     reward_sum: Scalar = 0.0
     reward_sq_sum: Scalar = 0.0
 
