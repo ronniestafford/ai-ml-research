@@ -9,6 +9,7 @@ from torchrl.data import TensorDictReplayBuffer
 from ai_ml_research.rl.dpcme.functions import (
     QFunctionModelBased,
     ValueFunction,
+    ValueTarget,
 )
 from ai_ml_research.rl.dpcme.value_function.config import (
     ValueFunctionConfig,
@@ -49,6 +50,16 @@ class ValueFunctionOptimiser(
     In both forms μ enters as a constant, trained by the CME. The
     buffer is shared with the agent that owns this component:
     observe() on the agent fills it, optimise() here consumes it.
+
+    The Bellman target itself is injected as value_target (a
+    ValueTarget: q_function, minibatch -> [batch]), e.g.
+    model_based_behaviour_value_target (default, policy evaluation
+    along the realised action, on-policy),
+    model_based_optimal_value_target (max over actions, off-policy)
+    or model_based_expected_sarsa_target partially applied with the
+    current ε. Each target reads its own slice of the sampled
+    transition. The target switches which Bellman operator's fixed
+    point w converges to; the optimisation machinery is identical.
     """
 
     def __init__(
@@ -60,6 +71,7 @@ class ValueFunctionOptimiser(
         loss_fn: Callable[..., torch.Tensor],
         config: ValueFunctionConfig,
         optimisation_metrics: ValueFunctionOptimisationMetrics,
+        value_target: ValueTarget,
         name: str = "value",
     ) -> None:
         super().__init__(optimisation_metrics, name=name)
@@ -69,7 +81,7 @@ class ValueFunctionOptimiser(
         self.replay_buffer = replay_buffer
         self.loss_fn = loss_fn
         self.config = config
-
+        self.value_target = value_target
         self.model_device = next(value_function.weights.parameters()).device
         self._grad_element_count = value_function.get_param_count()
 
@@ -95,30 +107,15 @@ class ValueFunctionOptimiser(
     def _optimise_step(self, minibatch: TensorDictBase) -> None:
         metrics = self.optimisation_metrics
 
-        state_action: torch.Tensor = torch.cat(
-            (minibatch.get("observation"), minibatch.get("action")), dim=-1
-        )  # [batch, state_dim + action_count]
-        reward: torch.Tensor = minibatch.get(("next", "reward")).squeeze(-1)
-        # is_terminated (not done): on truncation a successor exists and
-        # bootstrapping must continue; on termination it must not. Kept
-        # bool — the q function masks in tensor arithmetic.
-        is_terminated: torch.Tensor = (
-            minibatch.get(("next", "terminated")).squeeze(-1)
-        )  # bool [batch]
-
-        # Begin autograd graph
-        v: torch.Tensor = self.value_function(
-            minibatch.get("observation")
-        )  # [batch]
+        # Begin autograd graph; the injected target reads its own
+        # slice of the minibatch.
+        state: torch.Tensor = minibatch.get("observation")  # [batch, ...]
+        v: torch.Tensor = self.value_function(state)  # [batch]
 
         loss, q = (
-            self._residual_gradient_loss(
-                v, state_action, reward, is_terminated
-            )
+            self._residual_gradient_loss(v, minibatch)
             if self.config.optimisation.update_rule == "residual_gradient"
-            else self._semigradient_loss(
-                v, state_action, reward, is_terminated
-            )
+            else self._semigradient_loss(v, minibatch)
         )
 
         self.optimiser.zero_grad(set_to_none=True)
@@ -152,37 +149,29 @@ class ValueFunctionOptimiser(
     def _semigradient_loss(
         self,
         v: torch.Tensor,
-        state_actions: torch.Tensor,
-        rewards: torch.Tensor,
-        is_terminated: torch.Tensor,
+        minibatch: TensorDictBase,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        # Bellman residual δ = w·φ(s) − q(s,a), Bellman backup
-        # q(s,a) = r + γ·(1−is_terminated)·μ(s,a)·w evaluated without a
-        # graph (μ and w held constant), so loss.backward() yields the
-        # semigradient δ·φ(s): stochastic approximation of the TD
-        # (LSTD) fixed point.
+        # Bellman residual δ = w·φ(s) − target, target evaluated
+        # without a graph (μ and w held constant), so loss.backward()
+        # yields the semigradient δ·φ(s): stochastic approximation
+        # of the target Bellman operator's fixed point, whatever
+        # value_target was injected.
         with torch.no_grad():
-            q: torch.Tensor = self.q_function(
-                state_actions, rewards, is_terminated
-            )  # [batch]
+            q: torch.Tensor = self.value_target(self.q_function, minibatch)
         return self.loss_fn(v, q), q
 
     def _residual_gradient_loss(
         self,
         v: torch.Tensor,
-        state_actions: torch.Tensor,
-        rewards: torch.Tensor,
-        is_terminated: torch.Tensor,
+        minibatch: TensorDictBase,
     ) -> tuple[torch.Tensor, torch.Tensor]:
-        # Residual δ = w·φ(s) − q(s,a), Bellman backup
-        # q(s,a) = r + γ·(1−is_terminated)·μ(s,a)·w kept fully
-        # differentiable in w (μ still a constant, trained by the CME),
-        # so loss.backward() yields
-        # ∇½δ² = δ·(φ(s) − γ·(1−is_terminated)·μ(s,a)): gradient descent
-        # on the squared model Bellman residual.
-        q: torch.Tensor = self.q_function(
-            state_actions, rewards, is_terminated
-        )  # [batch]
+        # Residual δ = w·φ(s) − target, target kept fully
+        # differentiable in w (μ still a constant, trained by the
+        # CME): gradient descent on the squared model Bellman
+        # residual. For the behaviour target
+        # ∇½δ² = δ·(φ(s) − γ·(1−is_term)·μ(s,a)); for the max_a
+        # target δ·(φ(s) − γ·μ(s,a*)), a* the argmax action.
+        q: torch.Tensor = self.value_target(self.q_function, minibatch)
         return self.loss_fn(v, q), q
 
     def _update_optimisation_metrics(

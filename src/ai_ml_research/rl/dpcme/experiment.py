@@ -9,6 +9,7 @@ from ai_ml_research.rl.dpcme.functions import (
     PhiFunction,
     QFunctionModelBased,
     ValueFunction,
+    model_based_behaviour_value_target,
 )
 from ai_ml_research.rl.dpcme.value_function.optimiser import (
     ValueFunctionOptimiser,
@@ -140,6 +141,7 @@ def main() -> None:
         value_function=value_function,
         cme_function=mu_function,
         gamma=value_function_config.gamma,
+        action_count=action_count,
     )
 
     value_function_optimiser = ValueFunctionOptimiser(
@@ -153,6 +155,7 @@ def main() -> None:
         loss_fn=mse_loss,
         config=value_function_config,
         optimisation_metrics=ValueFunctionOptimisationMetrics(),
+        value_target=model_based_behaviour_value_target,
     )
 
     cme_optimiser = CMEOptimiser(
