@@ -4,12 +4,12 @@ from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.config import ExperimentConfig
+from ai_ml_research.rl.dpcme.bellman import model_based_behaviour_value_target
 from ai_ml_research.rl.dpcme.functions import (
     MuFunction,
     PhiFunction,
     QFunctionModelBased,
     ValueFunction,
-    model_based_behaviour_value_target,
 )
 from ai_ml_research.rl.dpcme.value_function.optimiser import (
     ValueFunctionOptimiser,

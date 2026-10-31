@@ -6,10 +6,10 @@ from torch import optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
+from ai_ml_research.rl.dpcme.bellman import ValueTarget
 from ai_ml_research.rl.dpcme.functions import (
     QFunctionModelBased,
     ValueFunction,
-    ValueTarget,
 )
 from ai_ml_research.rl.dpcme.value_function.config import (
     ValueFunctionConfig,
@@ -53,7 +53,7 @@ class ValueFunctionOptimiser(
 
     The Bellman target itself is injected as value_target (a
     ValueTarget: q_function, minibatch -> [batch]), e.g.
-    model_based_behaviour_value_target (default, policy evaluation
+    model_based_behaviour_value_target (policy evaluation
     along the realised action, on-policy),
     model_based_optimal_value_target (max over actions, off-policy)
     or model_based_expected_sarsa_target partially applied with the

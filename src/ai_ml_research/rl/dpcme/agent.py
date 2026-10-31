@@ -8,6 +8,7 @@ from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
 from ai_ml_research.rl.agent import Agent, get_epsilon_exp_decay
+from ai_ml_research.rl.dpcme.bellman import model_based_successor_values
 from ai_ml_research.rl.dpcme.config import DPCMEConfig
 from ai_ml_research.rl.dpcme.functions import QFunctionModelBased
 from ai_ml_research.rl.dpcme.metrics import (
@@ -94,41 +95,22 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         return one_hot(action_idx, num_classes=self.action_count)
 
     def _greedy_action_idx(self, observation: torch.Tensor) -> torch.Tensor:
-        # Greedy: argmax_a q(s,a). At decision time r(s,a) is unknown
-        # (no reward model), so the reward term of the backup is set to
-        # zero and actions are ranked by the successor-value term
-        # γ·μ(s,a)·w ≈ E[v(S′)|s,a].
+        # Greedy: argmax_a q(s,a) = argmax_a μ(s,a)·w. At decision
+        # time r(s,a) is unknown (no reward model), so the reward
+        # term of the backup is zero and drops out of the argmax;
+        # the actions are ranked by the successor-value term
+        # γ·μ(s,a)·w ≈ E[v(S′)|s,a] (the shared all-action
+        # evaluation of the bellman module).
         # [Performance] Forward pass on the model device; the final
         # action index returns to the env device.
         with torch.no_grad():
             state = observation.reshape(1, self.state_dim).to(
                 self.model_device
             )
-            states = state.expand(self.action_count, -1)
-            actions = torch.eye(
-                self.action_count,
-                device=self.model_device,
-                dtype=state.dtype,
-            )  # one-hot action per candidate a
-            rewards = torch.zeros(
-                self.action_count,
-                device=self.model_device,
-                dtype=state.dtype,
-            )
-            # No realised transition at decision time: a zeros bool
-            # flag leaves the survival mask fully open; the state is
-            # non-terminal by construction (the env loop just stepped).
-            is_terminated = torch.zeros(
-                self.action_count,
-                device=self.model_device,
-                dtype=torch.bool,
-            )
-            q: torch.Tensor = self.q_function(
-                torch.cat((states, actions), dim=-1),
-                rewards,
-                is_terminated,
-            )  # [action_count]
-        return q.argmax().to(observation.device)
+            successor_values: torch.Tensor = model_based_successor_values(
+                self.q_function, state
+            )  # [1, action_count]
+        return successor_values[0].argmax().to(observation.device)
 
     def observe(self, transition: TensorDictBase) -> None:
         self.replay_buffer.add(transition)
