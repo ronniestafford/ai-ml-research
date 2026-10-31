@@ -23,7 +23,8 @@ class ValueFunctionOptimiser(
     Optimisable[ValueFunctionOptimisationMetrics],
 ):
     """Value function v(s) = w·φ(s), fit by model-based TD in the φ
-    space; its Bellman backup q(s,a) = r(s,a) + γ·(1−terminated)·μ(s,a)·w
+    space; its Bellman backup
+    q(s,a) = r(s,a) + γ·(1−is_terminated)·μ(s,a)·w
     is derived by the q function, never fit.
 
     Collaborators (value and q functions, optimiser, replay buffer,
@@ -32,7 +33,7 @@ class ValueFunctionOptimiser(
     (value_function) onto its model-based Bellman backup q(s,a)
     (q_function):
 
-        minimise  ( w·φ(s) − [ r + γ·(1−term)·μ(s,a)·w ] )² = δ²
+        minimise  ( w·φ(s) − [ r + γ·(1−is_term)·μ(s,a)·w ] )² = δ²
 
     so the successor value comes from the CME μ ≈ E[φ(S′)|s,a] rather
     than from a sampled successor state, and is masked off when the
@@ -42,7 +43,7 @@ class ValueFunctionOptimiser(
 
         "semigradient":      δ·φ(s)
             (target q(s,a) held constant; TD fixed point)
-        "residual_gradient": 2δ·(φ(s) − γ·(1−term)·μ(s,a))
+        "residual_gradient": 2δ·(φ(s) − γ·(1−is_term)·μ(s,a))
             (target keeps its w dependence; descent on δ²)
 
     In both forms μ enters as a constant, trained by the CME. The
@@ -98,11 +99,12 @@ class ValueFunctionOptimiser(
             (minibatch.get("observation"), minibatch.get("action")), dim=-1
         )  # [batch, state_dim + action_count]
         reward: torch.Tensor = minibatch.get(("next", "reward")).squeeze(-1)
-        # terminated (not done): on truncation a successor exists and
-        # bootstrapping must continue; on termination it must not.
-        terminated: torch.Tensor = (
-            minibatch.get(("next", "terminated")).squeeze(-1).float()
-        )
+        # is_terminated (not done): on truncation a successor exists and
+        # bootstrapping must continue; on termination it must not. Kept
+        # bool — the q function masks in tensor arithmetic.
+        is_terminated: torch.Tensor = (
+            minibatch.get(("next", "terminated")).squeeze(-1)
+        )  # bool [batch]
 
         # Begin autograd graph
         v: torch.Tensor = self.value_function(
@@ -111,11 +113,11 @@ class ValueFunctionOptimiser(
 
         loss, q = (
             self._residual_gradient_loss(
-                v, state_action, reward, terminated
+                v, state_action, reward, is_terminated
             )
             if self.config.optimisation.update_rule == "residual_gradient"
             else self._semigradient_loss(
-                v, state_action, reward, terminated
+                v, state_action, reward, is_terminated
             )
         )
 
@@ -152,16 +154,16 @@ class ValueFunctionOptimiser(
         v: torch.Tensor,
         state_actions: torch.Tensor,
         rewards: torch.Tensor,
-        terminated: torch.Tensor,
+        is_terminated: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         # Bellman residual δ = w·φ(s) − q(s,a), Bellman backup
-        # q(s,a) = r + γ·(1−term)·μ(s,a)·w evaluated without a graph (μ
-        # and w held constant), so loss.backward() yields the
+        # q(s,a) = r + γ·(1−is_terminated)·μ(s,a)·w evaluated without a
+        # graph (μ and w held constant), so loss.backward() yields the
         # semigradient δ·φ(s): stochastic approximation of the TD
         # (LSTD) fixed point.
         with torch.no_grad():
             q: torch.Tensor = self.q_function(
-                state_actions, rewards, terminated
+                state_actions, rewards, is_terminated
             )  # [batch]
         return self.loss_fn(v, q), q
 
@@ -170,15 +172,16 @@ class ValueFunctionOptimiser(
         v: torch.Tensor,
         state_actions: torch.Tensor,
         rewards: torch.Tensor,
-        terminated: torch.Tensor,
+        is_terminated: torch.Tensor,
     ) -> tuple[torch.Tensor, torch.Tensor]:
         # Residual δ = w·φ(s) − q(s,a), Bellman backup
-        # q(s,a) = r + γ·(1−term)·μ(s,a)·w kept fully differentiable in
-        # w (μ still a constant, trained by the CME), so loss.backward()
-        # yields ∇½δ² = δ·(φ(s) − γ·(1−term)·μ(s,a)): gradient descent
+        # q(s,a) = r + γ·(1−is_terminated)·μ(s,a)·w kept fully
+        # differentiable in w (μ still a constant, trained by the CME),
+        # so loss.backward() yields
+        # ∇½δ² = δ·(φ(s) − γ·(1−is_terminated)·μ(s,a)): gradient descent
         # on the squared model Bellman residual.
         q: torch.Tensor = self.q_function(
-            state_actions, rewards, terminated
+            state_actions, rewards, is_terminated
         )  # [batch]
         return self.loss_fn(v, q), q
 

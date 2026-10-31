@@ -104,7 +104,7 @@ class ValueFunction(nn.Module):
 class QFunctionModelBased(nn.Module):
     """
     - State-action value function q:SxA->R defined through the CME:
-      q(s,a) = r(s,a) + γ·(1−terminated)·μ(s,a)·w, the model-based
+      q(s,a) = r(s,a) + γ·(1−is_terminated)·μ(s,a)·w, the model-based
       Bellman backup of v(s) = w·φ(s). The termination mask kills the
       successor term when no S′ exists (terminated, not truncated:
       on a timeout the successor does exist).
@@ -133,14 +133,17 @@ class QFunctionModelBased(nn.Module):
         self,
         state_action: torch.Tensor,
         reward: torch.Tensor,
-        terminated: torch.Tensor,
+        is_terminated: torch.Tensor,
     ) -> torch.Tensor:
-        # q(s,a) = r(s,a) + γ·(1−terminated)·μ(s,a)·w for stacked
-        # (s, a) pairs; terminated is the realised transition's flag.
-        # At decision time no transition exists yet: pass zeros.
+        # q(s,a) = r(s,a) + γ·(1−is_terminated)·μ(s,a)·w for stacked
+        # (s, a) pairs; is_terminated is the realised transition's bool
+        # flag. At decision time no transition exists yet: pass a
+        # zeros bool tensor (survival mask fully open).
         # μ is a constant here: it is trained by the CME, not by the value.
         with torch.no_grad():
             mu = self.cme_function(state_action)
         weights = self.value_function.weights.weight
         successor_value = (mu @ weights.T).squeeze(-1)
-        return reward + self.gamma * (1 - terminated) * successor_value
+        # Mask in tensor arithmetic (type promotion 0-/1-ifies).
+        successor_value = successor_value * is_terminated.logical_not()
+        return reward + self.gamma * successor_value

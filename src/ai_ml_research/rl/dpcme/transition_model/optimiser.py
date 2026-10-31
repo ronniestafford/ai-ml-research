@@ -81,18 +81,19 @@ class CMEOptimiser(Optimisable[CMEOptimisationMetrics]):
         mu: torch.Tensor = self.cme_function(state_action)  # [batch, phi_dim]
 
         # Regression target: φ is fixed, so it needs no gradient.
-        # terminated (not done): after a terminated transition the
+        # is_terminated (not done): after a terminated transition the
         # successor measure is the zero measure, whose CME is 0 — μ
         # learns the CME of the killed process. On truncation the
-        # successor exists and the target stays.
+        # successor exists and the target stays. Masked in tensor
+        # arithmetic (type promotion 0-/1-ifies the bool flag).
         with torch.no_grad():
             phi_successor: torch.Tensor = self.phi_function(
                 minibatch.get(("next", "observation"))
             )  # [batch, phi_dim]
-            survival = (
-                1.0 - minibatch.get(("next", "terminated")).float()
-            )  # [batch, 1]
-            phi_successor = phi_successor * survival
+            is_terminated: torch.Tensor = minibatch.get(
+                ("next", "terminated")
+            )  # bool [batch, 1]
+            phi_successor = phi_successor * is_terminated.logical_not()
 
         loss = self.loss_fn(mu, phi_successor)
 

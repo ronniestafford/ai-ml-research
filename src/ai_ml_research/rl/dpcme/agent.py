@@ -110,8 +110,18 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
                 device=self.model_device,
                 dtype=state.dtype,
             )
+            # No realised transition at decision time: a zeros bool
+            # flag leaves the survival mask fully open; the state is
+            # non-terminal by construction (the env loop just stepped).
+            is_terminated = torch.zeros(
+                self.action_count,
+                device=self.model_device,
+                dtype=torch.bool,
+            )
             q: torch.Tensor = self.q_function(
-                torch.cat((states, actions), dim=-1), rewards
+                torch.cat((states, actions), dim=-1),
+                rewards,
+                is_terminated,
             )  # [action_count]
         return q.argmax().to(observation.device)
 
