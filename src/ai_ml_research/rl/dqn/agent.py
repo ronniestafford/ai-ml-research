@@ -1,4 +1,5 @@
 import copy
+import random
 from collections.abc import Callable
 from dataclasses import replace
 
@@ -54,27 +55,40 @@ def get_epsilon_greedy_action(
         observation = observation.unsqueeze(0)
 
     observation_count = observation.shape[0]
-    random_mask = torch.rand(observation_count, device=env_device) < epsilon
-    action_idx = torch.randint(
-        0, action_count, (observation_count,), device=env_device
-    )
-
-    # [Performance] Greedy actions: forward pass and greedy action indexes
-    # calculated on the model's device. Final action indexes calculated on the
-    # env device.
-    if not random_mask.all():
+    # [Performance] The ε coins are drawn from the Python RNG (seeded
+    # in setup): a device-tensor `if`/`.all()` would be an implicit
+    # .item() — one sync per act on a GPU env.
+    random_choices = [
+        random.random() < epsilon for _ in range(observation_count)
+    ]
+    if all(random_choices):
+        action_idx = torch.randint(
+            0, action_count, (observation_count,), device=env_device
+        )
+    else:
+        # [Performance] Greedy actions: forward pass and greedy action
+        # indexes calculated on the model's device. Final action
+        # indexes calculated on the env device.
         model_device = next(q_function.parameters()).device
         with torch.no_grad():
             # [Performance] Keep on model device
             greedy_idx = q_function(observation.to(model_device)).argmax(
                 dim=-1
             )
-        # [Performance] Final action indexes: calculate on env device,
-        # inhibit CPU sync with torch.where, just in case env_device
-        # is GPU-based.
-        action_idx = torch.where(
-            random_mask, action_idx, greedy_idx.to(env_device)
-        )
+        if any(random_choices):
+            random_mask = torch.tensor(random_choices, device=env_device)
+            # [Performance] Random actions: keep on env device
+            random_idx = torch.randint(
+                0, action_count, (observation_count,), device=env_device
+            )
+            # [Performance] Final action indexes: calculate on env device,
+            # inhibit CPU sync with torch.where, just in case env_device
+            # is GPU-based.
+            action_idx = torch.where(
+                random_mask, random_idx, greedy_idx.to(env_device)
+            )
+        else:
+            action_idx = greedy_idx.to(env_device)
 
     action_one_hot = one_hot(action_idx, num_classes=action_count)
 

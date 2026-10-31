@@ -1,3 +1,4 @@
+import random
 from dataclasses import replace
 
 import torch
@@ -75,8 +76,12 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
 
     def act(self, observation: torch.Tensor) -> torch.Tensor:
         # ε-greedy behaviour policy over the model-based q.
-        # [Performance] Random action: keep on env device.
-        if torch.rand((), device=observation.device) < self._epsilon:
+        # [Performance] The ε branch is Python control flow: the coin
+        # comes from the Python RNG (seeded by setup). A device-tensor
+        # `if` would be an implicit .item() — one sync per act on a
+        # GPU env.
+        if random.random() < self._epsilon:
+            # [Performance] Random action: keep on env device.
             action_idx = torch.randint(
                 0,
                 self.action_count,
@@ -129,17 +134,22 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         self.replay_buffer.add(transition)
         self._transition_count += 1
 
-        # reward: torch.Tensor = transition.get(("next", "reward"))
-
-        self._update_optimisation_metrics(self.optimisation_metrics)
+        reward: torch.Tensor = transition.get(("next", "reward"))
+        self._update_optimisation_metrics(self.optimisation_metrics, reward)
 
     def optimise(self) -> None:
         self.cme.optimise()
         self.value_function.optimise()
 
-    def _update_optimisation_metrics(self, metrics: DPCMEOptimisationMetrics):
+    def _update_optimisation_metrics(
+        self, metrics: DPCMEOptimisationMetrics, reward: torch.Tensor
+    ):
         self.optimisation_metrics = replace(
             metrics,
+            # [Performance] Device-side accumulation: no .item();
+            # format_metrics() converts once per trajectory.
+            last_reward=reward,
+            reward_element_count=metrics.reward_element_count + 1,
             optim_step_count=metrics.optim_step_count + 1,
             trajectory_step_count=metrics.trajectory_step_count + 1,
         )
