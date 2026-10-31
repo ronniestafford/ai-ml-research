@@ -4,16 +4,30 @@ from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.config import ExperimentConfig
-from ai_ml_research.rl.dpcme.transition_model.CME import MuFunction
-from ai_ml_research.rl.dpcme.value_function.state_value import PhiFunction
+from ai_ml_research.rl.dpcme.functions import (
+    MuFunction,
+    PhiFunction,
+    QFunctionModelBased,
+    ValueFunction,
+)
+from ai_ml_research.rl.dpcme.value_function.optimiser import (
+    ValueFunctionOptimiser,
+)
+from ai_ml_research.rl.dpcme.value_function.config import (
+    ValueFunctionConfig,
+    ValueFunctionOptimisationConfig,
+)
+from ai_ml_research.rl.dpcme.value_function.metrics import (
+    ValueFunctionOptimisationMetrics,
+)
 from ai_ml_research.rl.experiment import run_experiment, setup
 from ai_ml_research.rl.dpcme.agent import DPCMEAgent
 from ai_ml_research.rl.dpcme.config import DPCMEConfig
 from ai_ml_research.rl.dpcme.metrics import (
     DPCMEOptimisationMetrics,
 )
-from ai_ml_research.rl.dpcme.transition_model.CME import (
-    CME,
+from ai_ml_research.rl.dpcme.transition_model.optimiser import (
+    CMEOptimiser,
 )
 from ai_ml_research.rl.dpcme.transition_model.config import (
     CMEConfig,
@@ -30,11 +44,11 @@ def main() -> None:
 
     # Environment MDP
     # env = GymEnv("CartPole-v1", sutton_barto_reward=True)
-    env = GymEnv("CartPole-v1")
-    env.set_seed(seed)
-    max_transition_count: int = env.spec.max_episode_steps
-    state_dim: int = env.observation_spec["observation"].shape[-1]
-    action_count: int = env.action_spec.shape[-1]
+    mdp = GymEnv("CartPole-v1")
+    mdp.set_seed(seed)
+    max_transition_count: int = mdp.spec.max_episode_steps
+    state_dim: int = mdp.observation_spec["observation"].shape[-1]
+    action_count: int = mdp.action_spec.shape[-1]
     # Discount rate for the experiment's evaluated returns metric
     evaluation_gamma: float = 0.99
 
@@ -74,6 +88,18 @@ def main() -> None:
         ),
     )
 
+    value_function_config = ValueFunctionConfig(
+        # Bellman-target discount, shared with the agent's
+        gamma=config.gamma,
+        optimisation=ValueFunctionOptimisationConfig(
+            learning_rate=1e-3,
+            mini_batch_size=64,
+            optim_steps_per_transition=10,
+            max_grad_norm=10.0,
+            warm_up_transition_count=max_transition_count * 2,
+        ),
+    )
+
     # [Performance] The environment is usually on the CPU,
     # so keep replay buffer CPU-side. The agent fills it, the
     # transition model samples it.
@@ -86,7 +112,7 @@ def main() -> None:
 
     # [Performance] Deep networks on GPU. φ is frozen but lives on the
     # model device, so the regression target shares μ's device.
-    cme_function = MuFunction(
+    mu_function = MuFunction(
         state_action_dim=cme_config.state_action_dim,
         psi_space_dim=cme_config.psi_space_dim,
         phi_space_dim=cme_config.phi_space_dim,
@@ -100,11 +126,40 @@ def main() -> None:
         bandwidth=cme_config.phi_bandwidth,
     ).to(model_device)
 
-    cme = CME(
-        cme_function=cme_function,
+    # v(s) = w·φ(s) in the frozen φ space: only the value weights w
+    # are learnable.
+    value_function = ValueFunction(
+        phi_function=phi_function,
+        phi_space_dim=cme_config.phi_space_dim,
+    ).to(model_device)
+
+    # q(s,a) = r(s,a) + γ·μ(s,a)·w is defined through the CME: it shares
+    # the CME's μ and the value function by reference, both used as
+    # constants here, so it owns no parameters of its own.
+    q_function = QFunctionModelBased(
+        value_function=value_function,
+        cme_function=mu_function,
+        gamma=value_function_config.gamma,
+    )
+
+    value_function_optimiser = ValueFunctionOptimiser(
+        value_function=value_function,
+        q_function=q_function,
+        optimiser=optim.Adam(
+            params=value_function.weights.parameters(),
+            lr=value_function_config.optimisation.learning_rate,
+        ),
+        replay_buffer=replay_buffer,
+        loss_fn=mse_loss,
+        config=value_function_config,
+        optimisation_metrics=ValueFunctionOptimisationMetrics(),
+    )
+
+    cme_optimiser = CMEOptimiser(
+        cme_function=mu_function,
         phi_function=phi_function,
         optimiser=optim.Adam(
-            params=cme_function.parameters(),
+            params=mu_function.parameters(),
             lr=cme_config.optimisation.learning_rate,
         ),
         replay_buffer=replay_buffer,
@@ -119,10 +174,12 @@ def main() -> None:
         config=config,
         optimisation_metrics=DPCMEOptimisationMetrics(),
         replay_buffer=replay_buffer,
-        cme=cme,
+        cme_optimiser=cme_optimiser,
+        value_function_optimiser=value_function_optimiser,
+        q_function=q_function,
     )
 
-    run_experiment(mdp=env, agent=agent, config=experiment_config)
+    run_experiment(mdp=mdp, agent=agent, config=experiment_config)
 
 
 if __name__ == "__main__":

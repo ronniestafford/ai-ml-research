@@ -3,11 +3,11 @@ from dataclasses import replace
 
 import torch
 
-from torch import nn, optim
+from torch import optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
-from ai_ml_research.rl.dpcme.value_function.state_value import PhiFunction
+from ai_ml_research.rl.dpcme.functions import MuFunction, PhiFunction
 from ai_ml_research.rl.dpcme.transition_model.config import CMEConfig
 from ai_ml_research.rl.dpcme.transition_model.metrics import (
     CMEOptimisationMetrics,
@@ -15,44 +15,7 @@ from ai_ml_research.rl.dpcme.transition_model.metrics import (
 from ai_ml_research.rl.optimisable import Optimisable
 
 
-class MuFunction(nn.Module):
-    """
-    - CME μ:SxA->Fϕ is the expected next-state feature ϕ(S').
-    - μ(s,a) = Wψ(s,a) where ψ is the state-action feature.
-    """
-
-    def __init__(
-        self,
-        state_action_dim: int,
-        psi_space_dim: int,
-        phi_space_dim: int,
-        hidden_dim: int,
-        hidden_layer_count: int,
-    ) -> None:
-        super().__init__()
-
-        layers: list[nn.Module] = [nn.Linear(state_action_dim, hidden_dim)]
-        layers.append(nn.ReLU())
-
-        for _ in range(hidden_layer_count - 1):
-            layers.append(nn.Linear(hidden_dim, hidden_dim))
-            layers.append(nn.ReLU())
-
-        layers.append(nn.Linear(hidden_dim, psi_space_dim))
-        layers.append(nn.ReLU())
-        self.psi_layer = layers[-1]
-        layers.append(nn.Linear(psi_space_dim, phi_space_dim))
-
-        self.network = nn.Sequential(*layers)
-
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.network(x)
-
-    def get_param_count(self) -> int:
-        return sum(p.numel() for p in self.parameters() if p.requires_grad)
-
-
-class CME(Optimisable[CMEOptimisationMetrics]):
+class CMEOptimiser(Optimisable[CMEOptimisationMetrics]):
     """Conditional mean embedding μ(s,a) ≈ E[φ(S') | S=s, A=a], fit by SGD.
 
     Collaborators (CME function, φ feature map, optimiser, replay buffer,
@@ -72,7 +35,7 @@ class CME(Optimisable[CMEOptimisationMetrics]):
         phi_function: PhiFunction,
         optimiser: optim.Optimizer,
         replay_buffer: TensorDictReplayBuffer,
-        loss_fn: Callable[[torch.Tensor, torch.Tensor], torch.Tensor],
+        loss_fn: Callable[..., torch.Tensor],
         config: CMEConfig,
         optimisation_metrics: CMEOptimisationMetrics,
         name: str = "cme",
@@ -118,10 +81,18 @@ class CME(Optimisable[CMEOptimisationMetrics]):
         mu: torch.Tensor = self.cme_function(state_action)  # [batch, phi_dim]
 
         # Regression target: φ is fixed, so it needs no gradient.
+        # terminated (not done): after a terminated transition the
+        # successor measure is the zero measure, whose CME is 0 — μ
+        # learns the CME of the killed process. On truncation the
+        # successor exists and the target stays.
         with torch.no_grad():
             phi_successor: torch.Tensor = self.phi_function(
                 minibatch.get(("next", "observation"))
             )  # [batch, phi_dim]
+            survival = (
+                1.0 - minibatch.get(("next", "terminated")).float()
+            )  # [batch, 1]
+            phi_successor = phi_successor * survival
 
         loss = self.loss_fn(mu, phi_successor)
 
