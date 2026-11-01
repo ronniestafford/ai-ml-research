@@ -29,6 +29,7 @@ def main() -> None:
         env_device=env_device,
         gamma=evaluation_gamma,
         trajectory_count=5,
+        state_scale=None,
     )
     config = TemplateConfig(
         # Discount factor

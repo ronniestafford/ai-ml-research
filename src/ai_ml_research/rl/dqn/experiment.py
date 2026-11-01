@@ -36,6 +36,7 @@ def main() -> None:
         env_device=env_device,
         gamma=evaluation_gamma,
         trajectory_count=1000,
+        state_scale=None,
     )
     config = DQNConfig(
         # Discount rate for the Bellman target

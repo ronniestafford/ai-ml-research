@@ -5,9 +5,7 @@ from ai_ml_research.rl.config import AgentConfig
 
 @dataclass(frozen=True)
 class DPCMEConfig(AgentConfig):
-    # This agent takes no gradient step of its own (the transition model
-    # does), so there is no OptimisationConfig here; the CME owns its own.
-    # gamma (inherited) is the Bellman-target discount.
+    # This agent takes no gradient step of its own, only its components do.
     # Exploration
     epsilon_start: float
     epsilon_end: float

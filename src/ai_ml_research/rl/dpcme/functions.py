@@ -26,12 +26,31 @@ class FunctionModule(ABC, nn.Module):
 class PhiFunction(FunctionModule):
     """Fixed random Fourier feature map φ: R^state_dim -> R^phi_space_dim.
 
-    φ(s) = √(2/d) · cos(Ws + b) with W_ij ~ N(0, 1/bandwidth²) and
-    b_i ~ U(0, 2π), so ⟨φ(s), φ(s')⟩ estimates the RBF kernel k(s, s')
-    and ‖φ(s)‖ ≈ 1.
+    φ(s) = √(2/d) · [cos(Ws), sin(Ws)], the conjugate-pair (sin/cos)
+    random Fourier features: d = phi_space_dim features from m = d/2
+    random frequency rows, with each input dimension j drawn at
+    scale W_ij ~ N(0, 1/(bandwidth·state_scale_j)²).
+
+    The per-dimension state_scale normalises the state space: the
+    kernel the features estimate is the axis-scaled RBF
+    E[⟨φ(s), φ(s′)⟩]
+        = exp(−½ Σ_j ((s_j−s′_j)/(bandwidth·state_scale_j))²),
+    so bandwidth is a dimensionless length scale, measured in
+    units of state_scale_j along each dimension. Every dimension
+    then contributes its own distances to the kernel in proportion
+    to its own scale — small-range dimensions (angles) are not
+    swamped by large-range ones (velocities).
+
+    The conjugate enrichment (same frequency as a cos and a sin
+    feature) makes this inner-product identity exact per frequency
+    without any random phase offset: for each shared frequency w,
+    cos(w·s)cos(w·s′) + sin(w·s)sin(w·s′) = cos(w·(s−s′)), and the
+    self inner product is exact — ‖φ(s)‖² = (2/d)·m = 1 for every
+    s, a unit-norm regression target for the CME and a value
+    function with exact norm geometry.
 
     φ defines the space the CME regresses onto, it is not learned:
-    the projection is frozen.
+    the frequencies are frozen.
     """
 
     def __init__(
@@ -39,19 +58,43 @@ class PhiFunction(FunctionModule):
         state_dim: int,
         phi_space_dim: int,
         bandwidth: float,
+        state_scale: torch.Tensor,
     ) -> None:
         super().__init__()
+        if phi_space_dim % 2:
+            raise ValueError(
+                "phi_space_dim must be even: features come in "
+                "(cos, sin) conjugate pairs"
+            )
+        if state_scale.shape != (state_dim,):
+            raise ValueError(
+                "state_scale must have one scale per state "
+                f"dimension: got {tuple(state_scale.shape)}, "
+                f"expected ({state_dim},)"
+            )
+        if (state_scale <= 0).any():
+            raise ValueError("state_scale must be strictly positive")
 
         self.normalisation: float = (2.0 / phi_space_dim) ** 0.5
 
-        projection = nn.Linear(state_dim, phi_space_dim)
+        frequency_count: int = phi_space_dim // 2
+        projection = nn.Linear(
+            state_dim, frequency_count, bias=False
+        )
+        # Dimensionless bandwidth in units of state_scale_j: each
+        # input dimension j gets frequency std
+        # 1/(bandwidth·state_scale_j).
+        per_dim_std = 1.0 / (bandwidth * state_scale)
         with torch.no_grad():
-            projection.weight.normal_(mean=0.0, std=1.0 / bandwidth)
-            projection.bias.uniform_(0.0, 2.0 * torch.pi)
+            projection.weight.normal_(mean=0.0, std=1.0)
+            projection.weight.mul_(per_dim_std)
         self.projection = projection.requires_grad_(False)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.normalisation * torch.cos(self.projection(x))
+        z = self.projection(x)
+        return self.normalisation * torch.cat(
+            (torch.cos(z), torch.sin(z)), dim=-1
+        )
 
 
 class MuFunction(FunctionModule):
@@ -140,9 +183,11 @@ class QFunctionModelBased(FunctionModule):
 
     Owns no parameters: v, φ and μ are injected by reference and
     enter q as constants (μ is trained by the CME component and
-    is evaluated through its inference). Bellman targets call
-    forward — the residual-gradient rule needs the graph through
-    w; pure evaluation calls inference.
+    is evaluated through its inference). It also owns no discount:
+    γ is a property of the value fit, not of q, and is supplied per
+    forward() call by the Bellman target — policy evaluation never
+    needs it. Bellman targets call forward — the residual-gradient
+    rule needs the graph through w; pure evaluation calls inference.
 
     Also exposed alongside the Bellman optimality backup
     v(s) = r + γ·max_a μ(s,a)·w, the off-policy (DQN-style max)
@@ -155,13 +200,11 @@ class QFunctionModelBased(FunctionModule):
         self,
         value_function: ValueFunction,
         cme_function: MuFunction,
-        gamma: float,
         action_count: int,
     ) -> None:
         super().__init__()
         self.value_function = value_function
         self.cme_function = cme_function
-        self.gamma = gamma
         self.action_count = action_count
 
     def forward(
@@ -169,11 +212,13 @@ class QFunctionModelBased(FunctionModule):
         state_action: torch.Tensor,
         reward: torch.Tensor,
         is_terminated: torch.Tensor,
+        gamma: float,
     ) -> torch.Tensor:
         # q(s,a) = r(s,a) + γ·(1−is_terminated)·μ(s,a)·w for stacked
         # (s, a) pairs; is_terminated is the realised transition's bool
-        # flag. At decision time no transition exists yet: pass a
-        # zeros bool tensor (survival mask fully open).
+        # flag and gamma the discount of the value fit (this
+        # module owns none — supplied by the Bellman target, so the
+        # backup discount is used for fitting and nowhere else).
         # μ is a constant here — evaluated through its no-graph
         # inference (it is trained by the CME, not by the value);
         # the graph to w is kept.
@@ -182,4 +227,4 @@ class QFunctionModelBased(FunctionModule):
         successor_value = (mu @ weights.T).squeeze(-1)
         # Mask in tensor arithmetic (type promotion 0-/1-ifies).
         successor_value = successor_value * is_terminated.logical_not()
-        return reward + self.gamma * successor_value
+        return reward + gamma * successor_value

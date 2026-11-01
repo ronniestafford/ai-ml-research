@@ -11,6 +11,12 @@ class ExperimentConfig:
     gamma: float  # Used to evaluate the agent
     trajectory_count: int
 
+    # Typical magnitude of each state dimension (one entry per
+    # dimension of the env's observation). Feature maps measure
+    # distances in units of this scale, so every dimension of the
+    # state space contributes in its own units.
+    state_scale: tuple[float, ...] | None
+
 
 @dataclass(frozen=True)
 class OptimisationConfig:

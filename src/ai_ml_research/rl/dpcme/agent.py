@@ -105,6 +105,7 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
             state = observation.reshape(1, self.state_dim).to(
                 self.model_device
             )
+            # TODO: use the Q function here when a reward function is learnt.
             successor_values: torch.Tensor = model_based_successor_values(
                 self.q_function, state
             )  # [1, action_count]

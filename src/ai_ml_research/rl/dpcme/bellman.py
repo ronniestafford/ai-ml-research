@@ -18,17 +18,27 @@ from ai_ml_research.rl.dpcme.functions import QFunctionModelBased
 # Shared Bellman-target interface: given the model-based q function
 # (whose μ and w the targets read as their model/value constants)
 # and a sampled minibatch of transitions, return the regression
-# target [batch] for v(s) = w·φ(s). Each target reads the slice of
-# the transition it needs: the policy-evaluation backup prices the
+# target [batch] for v(s) = w·φ(s). Each target reads its own slice
+# of the transition: the policy-evaluation backup prices the
 # realised action and masks terminated successors, the
 # policy-improvement (max) and policy-expectation (ε-greedy)
 # backups evaluate all actions at s and read only (s, r).
-ValueTarget = Callable[[QFunctionModelBased, TensorDictBase], torch.Tensor]
+# Per-target constants that are not part of the fit (the ε of
+# expected SARSA) are bound with functools.partial so every target
+# still matches this interface. The backup discount γ is NOT bound:
+# the value optimiser passes its
+# config.optimisation.backup_gamma on every
+# call — the backup discount exists only inside the value fit and
+# nowhere else.
+ValueTarget = Callable[
+    [QFunctionModelBased, TensorDictBase, float], torch.Tensor
+]
 
 
 def model_based_behaviour_value_target(
     q_function: QFunctionModelBased,
     minibatch: TensorDictBase,
+    gamma: float,
 ) -> torch.Tensor:
     # Model-based backup along the realised action:
     # q(s,a) = r + γ·(1−is_terminated)·μ(s,a)·w (the q function's
@@ -47,7 +57,7 @@ def model_based_behaviour_value_target(
         ("next", "terminated")
     ).squeeze(-1)
     state_action = torch.cat((state, action), dim=-1)
-    return q_function(state_action, reward, is_terminated)
+    return q_function(state_action, reward, is_terminated, gamma)
 
 
 def model_based_successor_values(
@@ -82,6 +92,7 @@ def model_based_successor_values(
 def model_based_optimal_value_target(
     q_function: QFunctionModelBased,
     minibatch: TensorDictBase,
+    gamma: float,
 ) -> torch.Tensor:
     # Bellman optimality backup v(s) = r + γ·max_a μ(s,a)·w:
     # successor value maximised over all actions at s, so the
@@ -94,12 +105,13 @@ def model_based_optimal_value_target(
     state: torch.Tensor = minibatch.get("observation")
     reward: torch.Tensor = minibatch.get(("next", "reward")).squeeze(-1)
     successor_values = model_based_successor_values(q_function, state)
-    return reward + q_function.gamma * successor_values.max(dim=-1).values
+    return reward + gamma * successor_values.max(dim=-1).values
 
 
 def model_based_expected_sarsa_target(
     q_function: QFunctionModelBased,
     minibatch: TensorDictBase,
+    gamma: float,
     epsilon: float,
 ) -> torch.Tensor:
     # Expected backup of the current ε-greedy policy AKA expected SARSA.
@@ -122,6 +134,6 @@ def model_based_expected_sarsa_target(
     successor_values = model_based_successor_values(q_function, state)
     greedy_value = successor_values.max(dim=-1).values
     uniform_mean = successor_values.mean(dim=-1)
-    return reward + q_function.gamma * (
+    return reward + gamma * (
         (1.0 - epsilon) * greedy_value + epsilon * uniform_mean
     )

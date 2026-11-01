@@ -52,7 +52,10 @@ class ValueFunctionOptimiser(
     observe() on the agent fills it, optimise() here consumes it.
 
     The Bellman target itself is injected as value_target (a
-    ValueTarget: q_function, minibatch -> [batch]), e.g.
+    ValueTarget: (q_function, minibatch, gamma) -> [batch]); this
+    optimiser supplies the fit's discount,
+    config.optimisation.backup_gamma, as the gamma argument on
+    every call, e.g.
     model_based_behaviour_value_target (policy evaluation
     along the realised action, on-policy),
     model_based_optimal_value_target (max over actions, off-policy)
@@ -186,7 +189,11 @@ class ValueFunctionOptimiser(
         # of the target Bellman operator's fixed point, whatever
         # value_target was injected.
         with torch.no_grad():
-            q: torch.Tensor = self.value_target(self.q_function, minibatch)
+            q: torch.Tensor = self.value_target(
+                self.q_function,
+                minibatch,
+                self.config.optimisation.backup_gamma,
+            )
         return self.loss_fn(v, q), q
 
     def _residual_gradient_loss(
@@ -200,7 +207,11 @@ class ValueFunctionOptimiser(
         # residual. For the behaviour target
         # ∇½δ² = δ·(φ(s) − γ·(1−is_term)·μ(s,a)); for the max_a
         # target δ·(φ(s) − γ·μ(s,a*)), a* the argmax action.
-        q: torch.Tensor = self.value_target(self.q_function, minibatch)
+        q: torch.Tensor = self.value_target(
+            self.q_function,
+            minibatch,
+            self.config.optimisation.backup_gamma,
+        )
         return self.loss_fn(v, q), q
 
     def _update_optimisation_metrics(

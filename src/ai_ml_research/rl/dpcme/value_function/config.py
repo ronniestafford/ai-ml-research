@@ -18,6 +18,13 @@ class ValueFunctionOptimisationConfig:
 
     max_grad_norm: float
 
+    # Backup discount γ = γ_backup applied when fitting v:
+    # q(s,a) = r(s,a) + γ·(1−is_terminated)·μ(s,a)·w. It lives
+    # with the value fit only — the optimiser passes it to the
+    # Bellman target on every call — never on the q module or the
+    # agent.
+    backup_gamma: float
+
     # Gradient form for δ = w·φ(s) − q(s,a):
     # "semigradient": target q(s,a) = r(s,a) + γ·μ(s,a)·w is held constant,
     # so the step is δ·φ(s).
@@ -35,8 +42,12 @@ class ValueFunctionOptimisationConfig:
 
 @dataclass(frozen=True)
 class ValueFunctionConfig:
-    # Bellman-target discount: q(s,a) = r(s,a) + γ·μ(s,a)·w.
-    gamma: float
+    # Random Fourier feature map φ: dimensionless RBF bandwidth,
+    # a length scale measured in units of φ's per-dimension state
+    # scale, so every state dimension contributes to the kernel in
+    # its own units. v lives in φ's space, so φ belongs to the
+    # value fit; the CME regresses onto the same (shared) φ.
+    phi_bandwidth: float
 
     # Optimisation
     optimisation: ValueFunctionOptimisationConfig

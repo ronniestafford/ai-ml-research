@@ -1,5 +1,6 @@
 from functools import partial
 
+import torch
 from torch import optim
 from torch.nn.functional import mse_loss
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
@@ -60,7 +61,11 @@ def main() -> None:
         model_device=model_device,
         env_device=env_device,
         gamma=evaluation_gamma,
-        trajectory_count=100,
+        trajectory_count=1000,
+        # Typical CartPole magnitude per state dimension:
+        # positions/angles at their failure thresholds, velocities
+        # at typical pre-failure magnitudes.
+        state_scale=(2.4, 6.0, 0.42, 6.0),
     )
     config = DPCMEConfig(
         # Discount factor
@@ -78,13 +83,13 @@ def main() -> None:
     cme_config = CMEConfig(
         # CME function: ψ (state-action features) then W
         state_action_dim=state_dim + action_count,
-        psi_space_dim=64,
-        phi_space_dim=64,
-        hidden_dim=128,
+        psi_space_dim=512,
+        # Random Fourier feature map φ: μ regresses onto φ's
+        # output space, so phi_space_dim is shared between the
+        # two.
+        phi_space_dim=256,
+        hidden_dim=200,
         hidden_layer_count=2,
-        # Random Fourier feature map φ: μ regresses onto φ's output space,
-        # so phi_space_dim is shared between the two.
-        phi_bandwidth=1.0,
         optimisation=CMEOptimisationConfig(
             learning_rate=3e-4,
             mini_batch_size=64,
@@ -94,15 +99,17 @@ def main() -> None:
     )
 
     value_function_config = ValueFunctionConfig(
-        # Bellman-target discount, shared with the agent's
-        gamma=config.gamma,
+        phi_bandwidth=1.0,
         optimisation=ValueFunctionOptimisationConfig(
-            learning_rate=1e-3,
+            learning_rate=1e-4,
             mini_batch_size=64,
             max_grad_norm=10.0,
             policy_iteration_count=10,
             sgd_step_count=20,
-            conservative_update_proportion=0.1,
+            # Backup discount used only when fitting v; distinct
+            # from the agent's gamma.
+            backup_gamma=0.96,
+            conservative_update_proportion=0.01,
         ),
     )
 
@@ -129,7 +136,10 @@ def main() -> None:
     phi_function = PhiFunction(
         state_dim=state_dim,
         phi_space_dim=cme_config.phi_space_dim,
-        bandwidth=cme_config.phi_bandwidth,
+        # Dimensionless bandwidth, in units of the experiment's
+        # state_scale.
+        bandwidth=value_function_config.phi_bandwidth,
+        state_scale=torch.tensor(experiment_config.state_scale),
     ).to(model_device)
 
     # v(s) = w·φ(s) in the frozen φ space: only the value weights w
@@ -145,7 +155,6 @@ def main() -> None:
     q_function = QFunctionModelBased(
         value_function=value_function,
         cme_function=mu_function,
-        gamma=value_function_config.gamma,
         action_count=action_count,
     )
 
