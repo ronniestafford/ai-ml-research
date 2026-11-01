@@ -23,7 +23,7 @@ class FunctionModule(ABC, nn.Module):
             return self(*args, **kwargs)
 
 
-class PhiFunction(FunctionModule):
+class StaticPhiFunction(FunctionModule):
     """Fixed random Fourier feature map φ: R^state_dim -> R^phi_space_dim.
 
     φ(s) = √(2/d) · [cos(Ws), sin(Ws)], the conjugate-pair (sin/cos)
@@ -53,6 +53,8 @@ class PhiFunction(FunctionModule):
     the frequencies are frozen.
     """
 
+    # TODO - Replace with a learnt phi function.
+
     def __init__(
         self,
         state_dim: int,
@@ -78,9 +80,7 @@ class PhiFunction(FunctionModule):
         self.normalisation: float = (2.0 / phi_space_dim) ** 0.5
 
         frequency_count: int = phi_space_dim // 2
-        projection = nn.Linear(
-            state_dim, frequency_count, bias=False
-        )
+        projection = nn.Linear(state_dim, frequency_count, bias=False)
         # Dimensionless bandwidth in units of state_scale_j: each
         # input dimension j gets frequency std
         # 1/(bandwidth·state_scale_j).
@@ -151,7 +151,7 @@ class ValueFunction(FunctionModule):
 
     def __init__(
         self,
-        phi_function: PhiFunction,
+        phi_function: StaticPhiFunction,
         phi_space_dim: int,
     ) -> None:
         super().__init__()
@@ -213,6 +213,7 @@ class QFunctionModelBased(FunctionModule):
         reward: torch.Tensor,
         is_terminated: torch.Tensor,
         gamma: float,
+        cme_features: torch.Tensor | None = None,
     ) -> torch.Tensor:
         # q(s,a) = r(s,a) + γ·(1−is_terminated)·μ(s,a)·w for stacked
         # (s, a) pairs; is_terminated is the realised transition's bool
@@ -222,9 +223,14 @@ class QFunctionModelBased(FunctionModule):
         # μ is a constant here — evaluated through its no-graph
         # inference (it is trained by the CME, not by the value);
         # the graph to w is kept.
-        mu = self.cme_function.inference(state_action)
+        # [Performance] cme_features: μ(s,a) precomputed for these
+        # exact (s, a) rows (the value optimiser caches it per
+        # sampled minibatch, μ being frozen during the value fit);
+        # computed on the fly when not supplied.
+        if cme_features is None:
+            cme_features = self.cme_function.inference(state_action)
         weights = self.value_function.linear_layer.weight
-        successor_value = (mu @ weights.T).squeeze(-1)
+        successor_value = (cme_features @ weights.T).squeeze(-1)
         # Mask in tensor arithmetic (type promotion 0-/1-ifies).
         successor_value = successor_value * is_terminated.logical_not()
         return reward + gamma * successor_value

@@ -6,7 +6,10 @@ from torch import optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
-from ai_ml_research.rl.dpcme.bellman import ValueTarget
+from ai_ml_research.rl.dpcme.bellman import (
+    ValueTarget,
+    model_based_successor_features,
+)
 from ai_ml_research.rl.dpcme.functions import (
     QFunctionModelBased,
     ValueFunction,
@@ -18,6 +21,16 @@ from ai_ml_research.rl.dpcme.value_function.metrics import (
     ValueFunctionOptimisationMetrics,
 )
 from ai_ml_research.rl.optimisable import Optimisable
+
+# Optional minibatch key: all-action CME features μ(s, ·) on the
+# action grid at each state, [batch, action_count, phi_dim]. This
+# optimiser writes them once per sampled minibatch — μ is frozen
+# during the value fit, so evaluating it per SGD step wastes a
+# network forward pass — and the Bellman targets then read them
+# from the minibatch instead of re-running μ. Absent (agent's
+# greedy policy, a raw buffer sample), the features are computed
+# on the fly.
+CACHED_CME_FEATURES_KEY = "cached_cme_features"
 
 
 class ValueFunctionOptimiser(
@@ -110,21 +123,38 @@ class ValueFunctionOptimiser(
         # damping the fixed-point iteration (a Polyak/soft-target
         # step). w_prev is snapshotted per iteration because SGD
         # mutates the Parameter in place.
+        sgd_step_count: int = self.config.optimisation.sgd_step_count
         for _ in range(self.config.optimisation.policy_iteration_count):
             if conservative_update_proportion != 1.0:
                 with torch.no_grad():
                     w_prev = weights.detach().clone()
 
-            for _ in range(self.config.optimisation.sgd_step_count):
-                # [Performance] Commit batch to GPU here,
-                # nowhere else.
-                minibatch = self.replay_buffer.sample(
-                    batch_size=min(
-                        len(self.replay_buffer),
-                        self.config.optimisation.mini_batch_size,
-                    )
-                ).to(self.model_device)
+            # [Performance] One buffer call per iteration: the
+            # SGD steps' minibatches are sampled at once (sampling
+            # is with replacement, so each step's slice is
+            # distributed exactly as a per-step sample) and the
+            # frozen CME is evaluated once over all rows — μ is
+            # constant during the value fit, and the cached
+            # features (CACHED_CME_FEATURES_KEY) reduce every
+            # SGD step's target to a matmul with w instead of a
+            # μ forward pass.
+            # [Performance] Commit batch to GPU here,
+            # nowhere else.
+            batch_size: int = min(
+                len(self.replay_buffer),
+                self.config.optimisation.mini_batch_size,
+            )
+            iteration_batch = self.replay_buffer.sample(
+                batch_size=batch_size * sgd_step_count
+            ).to(self.model_device)
+            iteration_batch[CACHED_CME_FEATURES_KEY] = (
+                model_based_successor_features(
+                    self.q_function,
+                    iteration_batch.get("observation"),
+                )
+            )
 
+            for minibatch in iteration_batch.chunk(sgd_step_count):
                 self._optimise_step(minibatch)
 
             if conservative_update_proportion != 1.0:

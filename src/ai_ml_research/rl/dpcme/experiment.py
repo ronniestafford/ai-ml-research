@@ -10,7 +10,7 @@ from ai_ml_research.rl.config import ExperimentConfig
 from ai_ml_research.rl.dpcme.bellman import model_based_expected_sarsa_target
 from ai_ml_research.rl.dpcme.functions import (
     MuFunction,
-    PhiFunction,
+    StaticPhiFunction,
     QFunctionModelBased,
     ValueFunction,
 )
@@ -43,6 +43,10 @@ from ai_ml_research.rl.dpcme.transition_model.metrics import (
 
 
 def main() -> None:
+    """
+    Learns optimal policy in ~? samples.
+    """
+
     # Hardware and seed
     seed, model_device, env_device = setup()
 
@@ -69,7 +73,7 @@ def main() -> None:
     )
     config = DPCMEConfig(
         # Discount factor
-        gamma=0.99,
+        gamma=evaluation_gamma,
         # Exploration
         epsilon_start=1.0,
         epsilon_end=0.01,
@@ -93,23 +97,24 @@ def main() -> None:
         optimisation=CMEOptimisationConfig(
             learning_rate=3e-4,
             mini_batch_size=64,
-            sgd_step_count=10,
             max_grad_norm=10.0,
+            sgd_step_count=4,
         ),
     )
 
     value_function_config = ValueFunctionConfig(
         phi_bandwidth=1.0,
         optimisation=ValueFunctionOptimisationConfig(
-            learning_rate=1e-4,
+            learning_rate=3e-4,
             mini_batch_size=64,
             max_grad_norm=10.0,
-            policy_iteration_count=10,
-            sgd_step_count=20,
+            policy_iteration_count=2,
+            sgd_step_count=4,
             # Backup discount used only when fitting v; distinct
             # from the agent's gamma.
             backup_gamma=0.96,
             conservative_update_proportion=0.01,
+            update_rule="residual_gradient",
         ),
     )
 
@@ -133,7 +138,7 @@ def main() -> None:
         hidden_layer_count=cme_config.hidden_layer_count,
     ).to(model_device)
 
-    phi_function = PhiFunction(
+    phi_function = StaticPhiFunction(
         state_dim=state_dim,
         phi_space_dim=cme_config.phi_space_dim,
         # Dimensionless bandwidth, in units of the experiment's
