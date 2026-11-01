@@ -52,13 +52,7 @@ class CMEOptimiser(Optimisable[CMEOptimisationMetrics]):
         self._grad_element_count = cme_function.get_param_count()
 
     def optimise(self) -> None:
-        if (
-            len(self.replay_buffer)
-            <= self.config.optimisation.warm_up_transition_count
-        ):
-            return
-
-        for _ in range(self.config.optimisation.optim_steps_per_transition):
+        for _ in range(self.config.optimisation.sgd_step_count):
             # [Performance] Commit batch to GPU here,
             # nowhere else.
             minibatch = self.replay_buffer.sample(
@@ -77,23 +71,25 @@ class CMEOptimiser(Optimisable[CMEOptimisationMetrics]):
             (minibatch.get("observation"), minibatch.get("action")), dim=-1
         )  # [batch, state_dim + action_count]
 
-        # Begin autograd graph
+        # Begin autograd graph: training path → forward (μ's own
+        # parameters need the graph; evaluation code would call
+        # inference instead).
         mu: torch.Tensor = self.cme_function(state_action)  # [batch, phi_dim]
 
-        # Regression target: φ is fixed, so it needs no gradient.
+        # Regression target: φ is fixed, so it needs no gradient —
+        # its inference is graph-free by construction.
         # is_terminated (not done): after a terminated transition the
         # successor measure is the zero measure, whose CME is 0 — μ
         # learns the CME of the killed process. On truncation the
         # successor exists and the target stays. Masked in tensor
         # arithmetic (type promotion 0-/1-ifies the bool flag).
-        with torch.no_grad():
-            phi_successor: torch.Tensor = self.phi_function(
-                minibatch.get(("next", "observation"))
-            )  # [batch, phi_dim]
-            is_terminated: torch.Tensor = minibatch.get(
-                ("next", "terminated")
-            )  # bool [batch, 1]
-            phi_successor = phi_successor * is_terminated.logical_not()
+        phi_successor: torch.Tensor = self.phi_function.inference(
+            minibatch.get(("next", "observation"))
+        )  # [batch, phi_dim]
+        is_terminated: torch.Tensor = minibatch.get(
+            ("next", "terminated")
+        )  # bool [batch, 1]
+        phi_successor = phi_successor * is_terminated.logical_not()
 
         loss = self.loss_fn(mu, phi_successor)
 

@@ -15,3 +15,8 @@ class DPCMEConfig(AgentConfig):
 
     # Replay buffer
     replay_buffer_max_size: int
+
+    # No gradient step is taken (by any component) until the replay
+    # buffer holds more transitions than this (checked once per
+    # optimise() call by the agent).
+    warm_up_transition_count: int

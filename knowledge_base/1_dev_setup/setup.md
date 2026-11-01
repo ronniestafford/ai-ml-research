@@ -13,5 +13,15 @@ $ uv sync
 ## DevContainer Development
 [Devcontainers](/.devcontainer) are available for both [python](/.devcontainer/ai-ml-research-python/) and [LaTeX](/.devcontainer/ai-ml-research-python/). The LaTeX container ships with the full LaTeX-Workshop (large container) to compile and render [theory_snippets](/knowledge_base/theory_snippets.tex).
 
-## Isolated Coding Agents
-Even if you develop on the host, you can still run a coding agent a [Docker sandbox](/.docker-sbxs/sbx-agents.md).
+## Isolated Coding Agents [Recommended]
+Trade-off between using Apple MPS GPU accelertation and augmented development. Manually develop/run experiments on the host (PyTorch MPS acceleration), but also run a coding agent in a [Docker sandbox](/.docker-sbxs/sbx-agents.md).
+
+```bash
+$ sbx env run ./.docker-sbxs --env-arg workspace_dir="$PWD"
+```
+
+To get token usage,
+```bash
+$ sbx exec -it --name <sbx-container-name> bash  # attach to existing container
+$$ opencode stats --days 7                       # get token usage stats
+```

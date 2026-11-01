@@ -1,10 +1,12 @@
+from functools import partial
+
 from torch import optim
 from torch.nn.functional import mse_loss
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.config import ExperimentConfig
-from ai_ml_research.rl.dpcme.bellman import model_based_behaviour_value_target
+from ai_ml_research.rl.dpcme.bellman import model_based_expected_sarsa_target
 from ai_ml_research.rl.dpcme.functions import (
     MuFunction,
     PhiFunction,
@@ -69,6 +71,9 @@ def main() -> None:
         epsilon_decay=10000,
         # Replay buffer
         replay_buffer_max_size=20000,
+        # Warm-up: no component takes a gradient step until the
+        # replay buffer holds more transitions than this.
+        warm_up_transition_count=max_transition_count * 2,
     )
     cme_config = CMEConfig(
         # CME function: ψ (state-action features) then W
@@ -83,9 +88,8 @@ def main() -> None:
         optimisation=CMEOptimisationConfig(
             learning_rate=3e-4,
             mini_batch_size=64,
-            optim_steps_per_transition=10,
+            sgd_step_count=10,
             max_grad_norm=10.0,
-            warm_up_transition_count=max_transition_count * 2,
         ),
     )
 
@@ -95,9 +99,10 @@ def main() -> None:
         optimisation=ValueFunctionOptimisationConfig(
             learning_rate=1e-3,
             mini_batch_size=64,
-            optim_steps_per_transition=10,
             max_grad_norm=10.0,
-            warm_up_transition_count=max_transition_count * 2,
+            policy_iteration_count=10,
+            sgd_step_count=20,
+            conservative_update_proportion=0.1,
         ),
     )
 
@@ -148,14 +153,17 @@ def main() -> None:
         value_function=value_function,
         q_function=q_function,
         optimiser=optim.Adam(
-            params=value_function.weights.parameters(),
+            params=value_function.linear_layer.parameters(),
             lr=value_function_config.optimisation.learning_rate,
         ),
         replay_buffer=replay_buffer,
         loss_fn=mse_loss,
         config=value_function_config,
         optimisation_metrics=ValueFunctionOptimisationMetrics(),
-        value_target=model_based_behaviour_value_target,
+        value_target=partial(
+            model_based_expected_sarsa_target,
+            epsilon=0.0,
+        ),
     )
 
     cme_optimiser = CMEOptimiser(

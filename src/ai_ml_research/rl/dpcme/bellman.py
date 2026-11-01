@@ -32,7 +32,9 @@ def model_based_behaviour_value_target(
 ) -> torch.Tensor:
     # Model-based backup along the realised action:
     # q(s,a) = r + γ·(1−is_terminated)·μ(s,a)·w (the q function's
-    # forward). Policy-evaluation backup of the behaviour policy:
+    # forward — a training path: the residual-gradient rule needs
+    # the graph through w; the semigradient rule wraps this call
+    # in no_grad). Policy-evaluation backup of the behaviour policy:
     # the realised action prices the target, so the fixed point is
     # the value of the policy that generated the data (on-policy).
     state: torch.Tensor = minibatch.get("observation")
@@ -68,9 +70,12 @@ def model_based_successor_values(
         ).repeat(batch_size),
         num_classes=action_count,
     ).to(state.dtype)
-    with torch.no_grad():
-        mu = q_function.cme_function(torch.cat((states, actions), dim=-1))
-    weights = q_function.value_function.weights.weight
+    # μ is a constant — evaluated through its graph-free inference;
+    # the matmul below stays outside it, keeping the graph to w.
+    mu = q_function.cme_function.inference(
+        torch.cat((states, actions), dim=-1)
+    )
+    weights = q_function.value_function.linear_layer.weight
     return (mu @ weights.T).squeeze(-1).reshape(batch_size, action_count)
 
 

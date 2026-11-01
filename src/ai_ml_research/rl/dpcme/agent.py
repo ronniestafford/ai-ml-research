@@ -52,8 +52,8 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         self.state_dim = state_dim
         self.config = config
         self.replay_buffer = replay_buffer
-        self.cme = cme_optimiser
-        self.value_function = value_function_optimiser
+        self.cme_optimiser = cme_optimiser
+        self.value_function_optimiser = value_function_optimiser
         self.q_function = q_function  # evaluated as a constant
 
         self.model_device = next(q_function.parameters()).device
@@ -73,14 +73,12 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         )
 
     def sub_optimisables(self) -> tuple[Optimisable, ...]:
-        return (self.cme, self.value_function)
+        return (self.cme_optimiser, self.value_function_optimiser)
 
     def act(self, observation: torch.Tensor) -> torch.Tensor:
         # ε-greedy behaviour policy over the model-based q.
-        # [Performance] The ε branch is Python control flow: the coin
-        # comes from the Python RNG (seeded by setup). A device-tensor
-        # `if` would be an implicit .item() — one sync per act on a
-        # GPU env.
+        # [Performance] The ε (Python RNG). A device-tensor
+        # `if` boolean stays on CPU, random actions on GPU
         if random.random() < self._epsilon:
             # [Performance] Random action: keep on env device.
             action_idx = torch.randint(
@@ -120,8 +118,10 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         self._update_optimisation_metrics(self.optimisation_metrics, reward)
 
     def optimise(self) -> None:
-        self.cme.optimise()
-        self.value_function.optimise()
+        if len(self.replay_buffer) <= self.config.warm_up_transition_count:
+            return
+        self.cme_optimiser.optimise()
+        self.value_function_optimiser.optimise()
 
     def _update_optimisation_metrics(
         self, metrics: DPCMEOptimisationMetrics, reward: torch.Tensor

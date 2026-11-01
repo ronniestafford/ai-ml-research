@@ -5,9 +5,8 @@ from dataclasses import dataclass
 class CMEOptimisationConfig:
     learning_rate: float
     mini_batch_size: int
-    optim_steps_per_transition: int
+    sgd_step_count: int
     max_grad_norm: float
-    warm_up_transition_count: int
 
 
 @dataclass(frozen=True)

@@ -60,6 +60,13 @@ class ValueFunctionOptimiser(
     current ε. Each target reads its own slice of the sampled
     transition. The target switches which Bellman operator's fixed
     point w converges to; the optimisation machinery is identical.
+
+    optimise() runs a policy iteration loop: policy_iteration_count
+    iterations, each fitting w with sgd_step_count SGD steps and
+    then committing a conservative (Polyak / soft target) update
+        w ← w_prev + prop·(w_inner − w_prev),
+    where prop is config.optimisation.conservative_update_proportion
+    (1.0 disables the damping).
     """
 
     def __init__(
@@ -82,27 +89,48 @@ class ValueFunctionOptimiser(
         self.loss_fn = loss_fn
         self.config = config
         self.value_target = value_target
-        self.model_device = next(value_function.weights.parameters()).device
+        self.model_device = next(
+            value_function.linear_layer.parameters()
+        ).device
         self._grad_element_count = value_function.get_param_count()
 
     def optimise(self) -> None:
-        if (
-            len(self.replay_buffer)
-            <= self.config.optimisation.warm_up_transition_count
-        ):
-            return
+        conservative_update_proportion: float = (
+            self.config.optimisation.conservative_update_proportion
+        )
+        weights = self.value_function.linear_layer.weight
 
-        for _ in range(self.config.optimisation.optim_steps_per_transition):
-            # [Performance] Commit batch to GPU here,
-            # nowhere else.
-            minibatch = self.replay_buffer.sample(
-                batch_size=min(
-                    len(self.replay_buffer),
-                    self.config.optimisation.mini_batch_size,
-                )
-            ).to(self.model_device)
+        # Policy iteration: each iteration evaluates the current
+        # Bellman target by fitting w with SGD, then commits the
+        # fit conservatively:
+        #   w ← w_prev + prop·(w_inner − w_prev),
+        # damping the fixed-point iteration (a Polyak/soft-target
+        # step). w_prev is snapshotted per iteration because SGD
+        # mutates the Parameter in place.
+        for _ in range(self.config.optimisation.policy_iteration_count):
+            if conservative_update_proportion != 1.0:
+                with torch.no_grad():
+                    w_prev = weights.detach().clone()
 
-            self._optimise_step(minibatch)
+            for _ in range(self.config.optimisation.sgd_step_count):
+                # [Performance] Commit batch to GPU here,
+                # nowhere else.
+                minibatch = self.replay_buffer.sample(
+                    batch_size=min(
+                        len(self.replay_buffer),
+                        self.config.optimisation.mini_batch_size,
+                    )
+                ).to(self.model_device)
+
+                self._optimise_step(minibatch)
+
+            if conservative_update_proportion != 1.0:
+                # In-place blend keeps the optimiser's and the q
+                # function's references to the Parameter valid.
+                with torch.no_grad():
+                    weights.sub_(w_prev).mul_(
+                        conservative_update_proportion
+                    ).add_(w_prev)
 
     def _optimise_step(self, minibatch: TensorDictBase) -> None:
         metrics = self.optimisation_metrics
@@ -110,6 +138,7 @@ class ValueFunctionOptimiser(
         # Begin autograd graph; the injected target reads its own
         # slice of the minibatch.
         state: torch.Tensor = minibatch.get("observation")  # [batch, ...]
+        # Training path → forward: keeps the graph to w.
         v: torch.Tensor = self.value_function(state)  # [batch]
 
         loss, q = (
@@ -122,7 +151,7 @@ class ValueFunctionOptimiser(
         loss.backward()
 
         grad_norm: torch.Tensor = torch.nn.utils.clip_grad_norm_(
-            self.value_function.weights.parameters(),
+            self.value_function.linear_layer.parameters(),
             max_norm=self.config.optimisation.max_grad_norm,
         )
         post_clip_norm: torch.Tensor = grad_norm.clamp(

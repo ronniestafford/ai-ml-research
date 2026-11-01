@@ -1,8 +1,29 @@
+from abc import ABC, abstractmethod
+
 import torch
 from torch import nn
 
 
-class PhiFunction(nn.Module):
+class FunctionModule(ABC, nn.Module):
+    """A component that computes a pure function of tensors.
+
+    The forward/inference convention (shared by every function
+    module below): forward() — invoked as module(x) — is the
+    evaluation itself, the path training code calls when it needs
+    the autograd graph; inference() wraps it in no_grad and is the
+    path evaluation code calls, treating the module as a constant.
+    Subclasses implement forward() only.
+    """
+
+    @abstractmethod
+    def forward(self, *args, **kwargs) -> torch.Tensor: ...
+
+    def inference(self, *args, **kwargs) -> torch.Tensor:
+        with torch.no_grad():
+            return self(*args, **kwargs)
+
+
+class PhiFunction(FunctionModule):
     """Fixed random Fourier feature map φ: R^state_dim -> R^phi_space_dim.
 
     φ(s) = √(2/d) · cos(Ws + b) with W_ij ~ N(0, 1/bandwidth²) and
@@ -10,7 +31,7 @@ class PhiFunction(nn.Module):
     and ‖φ(s)‖ ≈ 1.
 
     φ defines the space the CME regresses onto, it is not learned:
-    the projection is frozen and forward runs without a graph.
+    the projection is frozen.
     """
 
     def __init__(
@@ -33,10 +54,13 @@ class PhiFunction(nn.Module):
         return self.normalisation * torch.cos(self.projection(x))
 
 
-class MuFunction(nn.Module):
+class MuFunction(FunctionModule):
     """
     - CME μ:SxA->Fϕ is the expected next-state feature ϕ(S').
     - μ(s,a) = Wψ(s,a) where ψ is the state-action feature.
+
+    Training calls forward (the CME optimiser trains μ through
+    it); evaluation code calls inference.
     """
 
     def __init__(
@@ -70,13 +94,16 @@ class MuFunction(nn.Module):
         return sum(p.numel() for p in self.parameters() if p.requires_grad)
 
 
-class ValueFunction(nn.Module):
+class ValueFunction(FunctionModule):
     """
     - Value function v:S->R parameterized by w in the frozen φ space:
       v(s) = w·φ(s).
 
-    φ is frozen and injected by reference (evaluated without a
-    graph), so only the value weights w are learnable here.
+    φ is frozen and injected by reference (evaluated through its
+    inference), so only the value weights w are learnable here.
+
+    The value optimiser trains w through forward; evaluation code
+    calls inference.
     """
 
     def __init__(
@@ -86,22 +113,21 @@ class ValueFunction(nn.Module):
     ) -> None:
         super().__init__()
         self.phi_function = phi_function
-        self.weights = nn.Linear(phi_space_dim, 1, bias=False)
+        self.linear_layer = nn.Linear(phi_space_dim, 1, bias=False)
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
-        # v(s) = w·φ(s).
-        # φ is fixed, so it never needs a gradient.
-        with torch.no_grad():
-            phi = self.phi_function(state)
-        return self.weights(phi).squeeze(-1)
+        # v(s) = w·φ(s); the graph to w is kept (training path).
+        # φ is fixed: evaluated through its no-graph inference.
+        phi = self.phi_function.inference(state)
+        return self.linear_layer(phi).squeeze(-1)
 
     def get_param_count(self) -> int:
         # parameters() also walks the shared φ; only w is learnable
         # by this component.
-        return self.weights.weight.numel()
+        return self.linear_layer.weight.numel()
 
 
-class QFunctionModelBased(nn.Module):
+class QFunctionModelBased(FunctionModule):
     """
     - State-action value function q:SxA->R defined through the CME:
       q(s,a) = r(s,a) + γ·(1−is_terminated)·μ(s,a)·w, the model-based
@@ -113,9 +139,10 @@ class QFunctionModelBased(nn.Module):
       μ(s,a)·w ≈ E[v(S′)|s,a].
 
     Owns no parameters: v, φ and μ are injected by reference and
-    enter q as constants (μ is trained by the CME component and is
-    evaluated without a graph), so nothing here trains w — that is
-    the value function component's job.
+    enter q as constants (μ is trained by the CME component and
+    is evaluated through its inference). Bellman targets call
+    forward — the residual-gradient rule needs the graph through
+    w; pure evaluation calls inference.
 
     Also exposed alongside the Bellman optimality backup
     v(s) = r + γ·max_a μ(s,a)·w, the off-policy (DQN-style max)
@@ -147,10 +174,11 @@ class QFunctionModelBased(nn.Module):
         # (s, a) pairs; is_terminated is the realised transition's bool
         # flag. At decision time no transition exists yet: pass a
         # zeros bool tensor (survival mask fully open).
-        # μ is a constant here: it is trained by the CME, not by the value.
-        with torch.no_grad():
-            mu = self.cme_function(state_action)
-        weights = self.value_function.weights.weight
+        # μ is a constant here — evaluated through its no-graph
+        # inference (it is trained by the CME, not by the value);
+        # the graph to w is kept.
+        mu = self.cme_function.inference(state_action)
+        weights = self.value_function.linear_layer.weight
         successor_value = (mu @ weights.T).squeeze(-1)
         # Mask in tensor arithmetic (type promotion 0-/1-ifies).
         successor_value = successor_value * is_terminated.logical_not()
