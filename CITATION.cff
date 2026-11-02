@@ -1,0 +1,44 @@
+
+cff-version: 1.2.0
+message: >-
+  If you use any algorithm, implementation, or experimental
+  result from this repository, please cite this software.
+type: software
+
+title: "A Collection of Reinforcement Learning Algorithms"
+
+authors:
+  - family-names: "Stafford"
+    given-names: "Ronnie"
+
+version: "0.1.0"
+date-released: "2026-11-02"
+
+url: "https://github.com/ronniestafford/ai-ml-research"
+
+license: MIT
+
+abstract: >-
+  An open-source collection of reinforcement learning algorithms,
+  implementations, and experimental tools. The repository provides
+  implementations of multiple reinforcement learning methods for
+  research, experimentation, benchmarking, and reproducibility.
+
+keywords:
+  - reinforcement learning
+  - model-based reinforcement learning
+  - value-based reinforcement learning
+  - deep reinforcement learning
+  - reinforcement learning algorithms
+  - artificial intelligence
+  - machine learning
+  - open-source software
+
+preferred-citation:
+  type: software
+  title: "A Collection of Reinforcement Learning Algorithms"
+  authors:
+    - family-names: "Stafford"
+      given-names: "Ronnie"
+  year: 2026
+  url: "https://github.com/ronniestafford/ai-ml-research"
