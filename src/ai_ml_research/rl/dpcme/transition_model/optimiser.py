@@ -7,7 +7,11 @@ from torch import optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
-from ai_ml_research.rl.dpcme.functions import MuFunction, StaticPhiFunction
+from ai_ml_research.rl.dpcme.functions import (
+    MuFunction,
+    PhiFunction,
+    StaticPhiFunction,
+)
 from ai_ml_research.rl.dpcme.transition_model.config import CMEConfig
 from ai_ml_research.rl.dpcme.transition_model.metrics import (
     CMEOptimisationMetrics,
@@ -32,7 +36,7 @@ class CMEOptimiser(Optimisable[CMEOptimisationMetrics]):
     def __init__(
         self,
         cme_function: MuFunction,
-        phi_function: StaticPhiFunction,
+        phi_function: StaticPhiFunction | PhiFunction,
         optimiser: optim.Optimizer,
         replay_buffer: TensorDictReplayBuffer,
         loss_fn: Callable[..., torch.Tensor],

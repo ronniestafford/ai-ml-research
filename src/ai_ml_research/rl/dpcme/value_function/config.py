@@ -31,7 +31,7 @@ class ValueFunctionOptimisationConfig:
     # "residual_gradient": the target keeps its w dependence, so the step
     # is 2δ·(φ(s) − γ·μ(s,a)), gradient descent on the squared model
     # Bellman residual.
-    update_rule: UpdateRule = "semigradient"
+    update_rule: UpdateRule
 
     # Conservative (Polyak) outer update of w across optimise()
     # calls: the inner gradient descent produces w_inner, then
@@ -42,12 +42,19 @@ class ValueFunctionOptimisationConfig:
 
 @dataclass(frozen=True)
 class ValueFunctionConfig:
-    # Random Fourier feature map φ: dimensionless RBF bandwidth,
-    # a length scale measured in units of φ's per-dimension state
-    # scale, so every state dimension contributes to the kernel in
-    # its own units. v lives in φ's space, so φ belongs to the
-    # value fit; the CME regresses onto the same (shared) φ.
+    # Random Fourier feature map φ (StaticPhiFunction):
+    # dimensionless RBF bandwidth, a length scale measured in
+    # units of φ's per-dimension state scale, so every state
+    # dimension contributes to the kernel in its own units. v
+    # lives in φ's space, so φ belongs to the value fit; the CME
+    # regresses onto the same (shared) φ.
     phi_bandwidth: float
+
+    # Parametrised feature map φ (PhiFunction): the linear + ReLU
+    # stack's width and hidden layer count (unused by the static
+    # random Fourier map).
+    phi_hidden_dim: int
+    phi_hidden_layer_count: int
 
     # Optimisation
     optimisation: ValueFunctionOptimisationConfig

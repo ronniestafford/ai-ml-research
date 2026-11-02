@@ -97,6 +97,47 @@ class StaticPhiFunction(FunctionModule):
         )
 
 
+class PhiFunction(FunctionModule):
+    """Parametrised feature map φ: R^state_dim -> R^phi_space_dim.
+
+    The learnable counterpart of StaticPhiFunction: a plain
+    linear + ReLU stack with a parametrised hidden layer count,
+    the same shape as MuFunction's network. Its weights are not
+    frozen — an optimiser that includes its parameters trains φ
+    through forward. Consumers that treat φ as a constant (the
+    value fit, the CME regression target) evaluate it through
+    inference, so it stays untrained until wired into one.
+    """
+
+    def __init__(
+        self,
+        state_dim: int,
+        phi_space_dim: int,
+        hidden_dim: int,
+        hidden_layer_count: int,
+    ) -> None:
+        super().__init__()
+
+        layers: list[nn.Module] = [nn.Linear(state_dim, hidden_dim)]
+        layers.append(nn.ReLU())
+
+        for _ in range(hidden_layer_count - 1):
+            layers.append(nn.Linear(hidden_dim, hidden_dim))
+            layers.append(nn.ReLU())
+
+        layers.append(nn.Linear(hidden_dim, phi_space_dim))
+
+        self.network = nn.Sequential(*layers)
+
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
+        return self.network(x)
+
+    def get_param_count(self) -> int:
+        return sum(
+            p.numel() for p in self.parameters() if p.requires_grad
+        )
+
+
 class MuFunction(FunctionModule):
     """
     - CME μ:SxA->Fϕ is the expected next-state feature ϕ(S').
@@ -139,11 +180,12 @@ class MuFunction(FunctionModule):
 
 class ValueFunction(FunctionModule):
     """
-    - Value function v:S->R parameterized by w in the frozen φ space:
+    - Value function v:S->R parameterized by w in the φ space:
       v(s) = w·φ(s).
 
-    φ is frozen and injected by reference (evaluated through its
-    inference), so only the value weights w are learnable here.
+    φ is injected by reference and evaluated through its
+    inference — a constant for this fit, static or not — so only
+    the value weights w are trained here.
 
     The value optimiser trains w through forward; evaluation code
     calls inference.
@@ -151,7 +193,7 @@ class ValueFunction(FunctionModule):
 
     def __init__(
         self,
-        phi_function: StaticPhiFunction,
+        phi_function: StaticPhiFunction | PhiFunction,
         phi_space_dim: int,
     ) -> None:
         super().__init__()
@@ -160,13 +202,14 @@ class ValueFunction(FunctionModule):
 
     def forward(self, state: torch.Tensor) -> torch.Tensor:
         # v(s) = w·φ(s); the graph to w is kept (training path).
-        # φ is fixed: evaluated through its no-graph inference.
+        # φ is a constant of this fit: evaluated through its
+        # no-graph inference.
         phi = self.phi_function.inference(state)
         return self.linear_layer(phi).squeeze(-1)
 
     def get_param_count(self) -> int:
-        # parameters() also walks the shared φ; only w is learnable
-        # by this component.
+        # parameters() also walks the shared φ; only w is trained
+        # by this component (φ is its constant, not its parameter).
         return self.linear_layer.weight.numel()
 
 
@@ -177,7 +220,7 @@ class QFunctionModelBased(FunctionModule):
       Bellman backup of v(s) = w·φ(s). The termination mask kills the
       successor term when no S′ exists (terminated, not truncated:
       on a timeout the successor does exist).
-    - The value lives in the frozen φ space, and because
+    - The value lives in the φ space, and because
       μ(s,a) ≈ E[φ(S′)|s,a], the successor value is
       μ(s,a)·w ≈ E[v(S′)|s,a].
 

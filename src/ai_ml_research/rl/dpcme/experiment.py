@@ -1,6 +1,5 @@
 from functools import partial
 
-import torch
 from torch import optim
 from torch.nn.functional import mse_loss
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
@@ -10,7 +9,7 @@ from ai_ml_research.rl.config import ExperimentConfig
 from ai_ml_research.rl.dpcme.bellman import model_based_expected_sarsa_target
 from ai_ml_research.rl.dpcme.functions import (
     MuFunction,
-    StaticPhiFunction,
+    PhiFunction,
     QFunctionModelBased,
     ValueFunction,
 )
@@ -103,17 +102,21 @@ def main() -> None:
     )
 
     value_function_config = ValueFunctionConfig(
+        # Dimensionless RBF bandwidth for a StaticPhiFunction;
+        # unused by the parametrised PhiFunction built below.
         phi_bandwidth=1.0,
+        phi_hidden_dim=200,
+        phi_hidden_layer_count=2,
         optimisation=ValueFunctionOptimisationConfig(
             learning_rate=3e-4,
             mini_batch_size=64,
             max_grad_norm=10.0,
-            policy_iteration_count=2,
-            sgd_step_count=4,
+            policy_iteration_count=5,
+            sgd_step_count=20,
             # Backup discount used only when fitting v; distinct
             # from the agent's gamma.
             backup_gamma=0.96,
-            conservative_update_proportion=0.01,
+            conservative_update_proportion=0.05,
             update_rule="residual_gradient",
         ),
     )
@@ -128,8 +131,10 @@ def main() -> None:
         batch_size=cme_config.optimisation.mini_batch_size,
     )
 
-    # [Performance] Deep networks on GPU. φ is frozen but lives on the
-    # model device, so the regression target shares μ's device.
+    # [Performance] Deep networks on GPU. φ enters the CME
+    # regression target and the value fit as a constant (both
+    # evaluate it through its inference), so like μ it lives on
+    # the model device.
     mu_function = MuFunction(
         state_action_dim=cme_config.state_action_dim,
         psi_space_dim=cme_config.psi_space_dim,
@@ -138,17 +143,15 @@ def main() -> None:
         hidden_layer_count=cme_config.hidden_layer_count,
     ).to(model_device)
 
-    phi_function = StaticPhiFunction(
+    phi_function = PhiFunction(
         state_dim=state_dim,
         phi_space_dim=cme_config.phi_space_dim,
-        # Dimensionless bandwidth, in units of the experiment's
-        # state_scale.
-        bandwidth=value_function_config.phi_bandwidth,
-        state_scale=torch.tensor(experiment_config.state_scale),
+        hidden_dim=value_function_config.phi_hidden_dim,
+        hidden_layer_count=value_function_config.phi_hidden_layer_count,
     ).to(model_device)
 
-    # v(s) = w·φ(s) in the frozen φ space: only the value weights w
-    # are learnable.
+    # v(s) = w·φ(s): φ enters as a constant, so only the value
+    # weights w are trained.
     value_function = ValueFunction(
         phi_function=phi_function,
         phi_space_dim=cme_config.phi_space_dim,
