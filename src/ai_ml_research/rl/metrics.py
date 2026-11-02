@@ -23,7 +23,7 @@ class OptimisationMetrics:
 @dataclass(frozen=True)
 class TrajectoryMetrics:
     transition_count: int = 0
-    discounted_reward: float = 0.0
+    discounted_reward: Scalar = 0.0
 
 
 @dataclass(frozen=True)

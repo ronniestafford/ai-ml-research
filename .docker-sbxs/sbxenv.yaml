@@ -1,0 +1,36 @@
+# syntax=docker/sandbox-env:1
+schemaVersion: "1"
+name: "opencode-sbx-ai-ml-research"
+
+# Usage: cd ${REPO_ROOT} && sbx env run ./.docker-sbxs --env-arg workspace_dir="$PWD"
+# This creates a custom opencode sandbox, equivalent to `sbx run opencode` with the following additional features:
+#   1. .python-version Python installed for the agent.
+#   2. Pyenv virtual env installed for agent to mess with.
+#   3. The host's .venv is readonly and not used by the agent.
+
+# Required by the environment schema
+agent: "opencode-sbx-ai-ml-research-agent"
+
+# 1. Mount primary repository directory (one level up from .docker)
+workspace: ".."
+
+# 2. Expose the variable directly to the container runtime from cmd line --env-arg workspace_dir
+env:
+  WORKSPACE_DIR: ${{ env.args.workspace_dir }}
+
+# 3. Reference custom kit directory in the kits list
+kits:
+  - source: "./opencode-sbx-ai-ml-research-agent"
+    args:
+      workspace_dir: ${{ env.args.workspace_dir }}
+
+# 4. Declare the --env-arg workspace_dir argument properly so it accepts an external string input
+args:
+  workspace_dir:
+    required: true
+    description: "Passed via CLI to grab absolute host path"
+
+# 5. Correctly lock down .venv using readOnly: true. Agent is not allowed write access to host's .venv folder.
+additionalWorkspaces:
+  - path: "../.venv"
+    readOnly: true

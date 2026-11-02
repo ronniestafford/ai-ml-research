@@ -3,7 +3,7 @@ from torch.nn.functional import smooth_l1_loss
 from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
-from ai_ml_research.rl.config import ExperimentConfig
+from ai_ml_research.rl.config import ExperimentConfig, OptimisationConfig
 from ai_ml_research.rl.dqn.agent import (
     DQNAgent,
     QFunction,
@@ -11,9 +11,14 @@ from ai_ml_research.rl.dqn.agent import (
 from ai_ml_research.rl.dqn.config import DQNConfig
 from ai_ml_research.rl.dqn.metrics import DQNOptimisationMetrics
 from ai_ml_research.rl.experiment import run_experiment, setup
+from ai_ml_research.rl.evaluation import EvaluationConfig
 
 
 def main() -> None:
+    """
+    Learns optimal policy in ~50,000-70,000 samples.
+    """
+
     # Hardware and seed
     seed, model_device, env_device = setup()
 
@@ -26,27 +31,23 @@ def main() -> None:
     # Discount rate for the experiment's evaluated returns metric
     evaluation_gamma: float = 0.99
 
-    print(f"MAX_TRANSITION_COUNT: {max_transition_count}")
-    print(f"Action count: {action_count}")
-    print(f"observation_spec: {env.observation_spec}")
-    print(f"action_spec: {env.action_spec}")
-    print(f"reward_spec: {env.reward_spec}")
-    print(f"done_spec: {env.done_spec}")
-
     experiment_config = ExperimentConfig(
         seed=seed,
         model_device=model_device,
         env_device=env_device,
         gamma=evaluation_gamma,
         trajectory_count=1000,
+        state_scale=None,
     )
     config = DQNConfig(
         # Discount rate for the Bellman target
         gamma=0.99,
-        # Optimisation
-        learning_rate=3e-4,
-        mini_batch_size=64,
-        optim_steps_per_transition=1,
+        # Optimisation of the Q function
+        optimisation=OptimisationConfig(
+            learning_rate=3e-4,
+            mini_batch_size=64,
+            optim_steps_per_transition=1,
+        ),
         # Q Functions
         hidden_dim=128,
         hidden_layer_count=2,
@@ -71,7 +72,7 @@ def main() -> None:
         storage=LazyTensorStorage(
             config.replay_buffer_max_size, device=env_device
         ),
-        batch_size=config.mini_batch_size,
+        batch_size=config.optimisation.mini_batch_size,
     )
 
     # [Performance] Deep networks on GPU.
@@ -85,7 +86,8 @@ def main() -> None:
     agent = DQNAgent(
         q_function=q_function,
         optimiser=optim.Adam(
-            params=q_function.parameters(), lr=config.learning_rate
+            params=q_function.parameters(),
+            lr=config.optimisation.learning_rate,
         ),
         replay_buffer=replay_buffer,
         loss_fn=smooth_l1_loss,
@@ -94,7 +96,19 @@ def main() -> None:
         optimisation_metrics=DQNOptimisationMetrics(),
     )
 
-    run_experiment(env=env, agent=agent, config=experiment_config)
+    evaluation_config = EvaluationConfig(
+        # 8 concurrent greedy episodes on persistent cloned env
+        # workers, evaluated once per training trajectory.
+        episode_count=8,
+        base_seed=seed,
+    )
+
+    run_experiment(
+        mdp=env,
+        agent=agent,
+        config=experiment_config,
+        evaluation=evaluation_config,
+    )
 
 
 if __name__ == "__main__":

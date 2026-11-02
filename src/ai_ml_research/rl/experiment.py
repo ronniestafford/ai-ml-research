@@ -1,5 +1,6 @@
 import random
 from dataclasses import replace
+from typing import cast
 
 import numpy as np
 import torch
@@ -7,7 +8,18 @@ from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.agent import Agent
 from ai_ml_research.rl.config import ExperimentConfig
-from ai_ml_research.rl.metrics import GlobalMetrics, TrajectoryMetrics
+from ai_ml_research.rl.evaluation import (
+    EvaluationConfig,
+    GreedyPolicy,
+    evaluate_greedy,
+    make_eval_envs,
+    print_evaluation_metrics,
+)
+from ai_ml_research.rl.metrics import (
+    GlobalMetrics,
+    Scalar,
+    TrajectoryMetrics,
+)
 
 
 def setup() -> tuple[int, torch.device, torch.device]:
@@ -33,58 +45,103 @@ def setup() -> tuple[int, torch.device, torch.device]:
 
 
 def run_experiment(
-    env: GymEnv,
+    mdp: GymEnv,
     agent: Agent,
     config: ExperimentConfig,
+    evaluation: EvaluationConfig | None = None,
 ) -> GlobalMetrics:
     print("\n BEGIN EXPERIMENT \n")
     metrics_global = GlobalMetrics(seed=config.seed)
+    evaluation_idx = 0
+    eval_envs = None
+    if evaluation is not None:
+        eval_envs = make_eval_envs(mdp, evaluation)
 
-    for trajectory_idx in range(config.trajectory_count):
-        metrics_trajectory = TrajectoryMetrics()
-        agent.on_trajectory_start()
+    try:
+        for trajectory_idx in range(config.trajectory_count):
+            metrics_trajectory = TrajectoryMetrics()
+            agent.on_trajectory_start()
 
-        proto_transition = env.reset()
-        done = False
+            proto_transition = mdp.reset()
+            done = False
 
-        while not done:
-            proto_transition.set(
-                "action", agent.act(proto_transition.get("observation"))
-            )
-            full_transition = env.step(proto_transition)
-            agent.observe(full_transition)
-
-            reward: float = full_transition.get(("next", "reward")).item()
-            metrics_trajectory = replace(
-                metrics_trajectory,
-                discounted_reward=metrics_trajectory.discounted_reward
-                + config.gamma**metrics_trajectory.transition_count * reward,
-                transition_count=metrics_trajectory.transition_count + 1,
-            )
-
-            agent.optimise()
-
-            proto_transition = full_transition.get("next")
-
-            # "done" == "truncated" (trajectory exceeded max transition count,
-            # a successor state exists) OR "terminated" (trajectory cut short
-            # early because of an event e.g. dropped the pole in cart-pole).
-            if proto_transition.get("done").item():
-                done = True
-                agent.on_trajectory_end()
-                agent.print_metrics(
-                    trajectory_idx,
-                    metrics_global,
-                    metrics_trajectory,
+            while not done:
+                proto_transition.set(
+                    "action", agent.act(proto_transition.get("observation"))
                 )
+                full_transition = mdp.step(proto_transition)
+                agent.observe(full_transition)
+
+                # [Performance] Device-side accumulation: the reward
+                # stays a 0-dim tensor (no .item()); it is converted
+                # once per trajectory when print_metrics formats it.
+                # The only per-transition sync left is the done
+                # check below.
+                reward: Scalar = (
+                    full_transition.get(("next", "reward")).squeeze()
+                )
+                metrics_trajectory = replace(
+                    metrics_trajectory,
+                    discounted_reward=(
+                        metrics_trajectory.discounted_reward
+                        + config.gamma
+                        ** metrics_trajectory.transition_count
+                        * reward
+                    ),
+                    transition_count=metrics_trajectory.transition_count + 1,
+                )
+
+                agent.optimise()
+
+                proto_transition = full_transition.get("next")
+
+                # "done" == "truncated" (trajectory exceeded max
+                # transition count, a successor state exists) OR
+                # "terminated" (trajectory cut short early because
+                # of an event e.g. dropped the pole in cart-pole).
+                if proto_transition.get("done").item():
+                    done = True
+                    agent.on_trajectory_end()
+                    agent.print_metrics(
+                        trajectory_idx,
+                        metrics_global,
+                        metrics_trajectory,
+                    )
+                    metrics_global = replace(
+                        metrics_global,
+                        trajectory_count=(
+                            metrics_global.trajectory_count + 1
+                        ),
+                    )
+
+                    # Greedy evaluation once per trajectory, on the
+                    # persistent worker pool (fresh seeds each
+                    # time): concurrent episodes on clones of the
+                    # env, metrics on their own line (never mixed
+                    # into the trajectory metrics above). The agent
+                    # is only read.
+                    if eval_envs is not None:
+                        print_evaluation_metrics(
+                            evaluate_greedy(
+                                # The Agent ABC does not require
+                                # act_batch; an agent evaluated
+                                # this way provides it.
+                                cast(GreedyPolicy, agent),
+                                eval_envs,
+                                gamma=config.gamma,
+                                base_seed=evaluation.base_seed,
+                                evaluation_idx=evaluation_idx,
+                            ),
+                            metrics_global.transition_count + 1,
+                        )
+                        evaluation_idx += 1
+
                 metrics_global = replace(
                     metrics_global,
-                    trajectory_count=metrics_global.trajectory_count + 1,
+                    transition_count=metrics_global.transition_count + 1,
                 )
-
-            metrics_global = replace(
-                metrics_global,
-                transition_count=metrics_global.transition_count + 1,
-            )
+    finally:
+        if eval_envs is not None:
+            eval_envs.close()
 
     return metrics_global
