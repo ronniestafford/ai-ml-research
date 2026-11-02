@@ -13,6 +13,14 @@ from ai_ml_research.rl.dpcme.functions import (
     QFunctionModelBased,
     ValueFunction,
 )
+from ai_ml_research.rl.dpcme.phi.optimiser import PhiOptimiser
+from ai_ml_research.rl.dpcme.phi.config import (
+    PhiConfig,
+    PhiOptimisationConfig,
+)
+from ai_ml_research.rl.dpcme.phi.metrics import (
+    PhiOptimisationMetrics,
+)
 from ai_ml_research.rl.dpcme.value_function.optimiser import (
     ValueFunctionOptimiser,
 )
@@ -76,7 +84,7 @@ def main() -> None:
         # Exploration
         epsilon_start=1.0,
         epsilon_end=0.01,
-        epsilon_decay=10000,
+        epsilon_decay=25000,
         # Replay buffer
         replay_buffer_max_size=20000,
         # Warm-up: no component takes a gradient step until the
@@ -95,7 +103,10 @@ def main() -> None:
         hidden_layer_count=2,
         optimisation=CMEOptimisationConfig(
             learning_rate=3e-4,
-            mini_batch_size=64,
+            # μ is the regression target of every downstream
+            # fit: halve its minibatch noise relative to the
+            # consumers'.
+            mini_batch_size=128,
             max_grad_norm=10.0,
             sgd_step_count=4,
         ),
@@ -111,13 +122,46 @@ def main() -> None:
             learning_rate=3e-4,
             mini_batch_size=64,
             max_grad_norm=10.0,
-            policy_iteration_count=5,
-            sgd_step_count=20,
+            # Plan budget vs model staleness: re-converging w to
+            # the fixed point of a stale μ every transition just
+            # fits μ's noise (model error is amplified by
+            # 1/(1−backup_gamma)). Two damped iterations instead;
+            # the blend is per iteration, so the effective
+            # commitment per transition is 1−(1−0.05)² ≈ 0.10.
+            policy_iteration_count=2,
+            sgd_step_count=10,
             # Backup discount used only when fitting v; distinct
-            # from the agent's gamma.
-            backup_gamma=0.96,
-            conservative_update_proportion=0.05,
-            update_rule="residual_gradient",
+            # from the agent's gamma. Long enough a horizon for
+            # the optimal policy, short enough to keep the
+            # model-error amplification 1/(1−γ) at 50.
+            backup_gamma=0.98,
+            conservative_update_rate=0.05,
+            # Semigradient: the target (a max over actions) is held
+            # constant per step, so the fit tracks the Bellman
+            # operator's fixed point. The residual_gradient rule
+            # instead descends the squared optimal Bellman
+            # residual, whose gradient flow is not a contraction.
+            update_rule="semigradient",
+        ),
+    )
+
+    phi_config = PhiConfig(
+        # False: φ stays a frozen random map wired directly to
+        # its consumers (today's behaviour). True: PhiOptimiser
+        # trains φ and the consumers read its EMA target copy.
+        train_phi=True,
+        optimisation=PhiOptimisationConfig(
+            # A tenth of μ's rate: the space must move slower
+            # than anything fitting itself to it.
+            learning_rate=3e-5,
+            mini_batch_size=64,
+            sgd_step_count=1,
+            max_grad_norm=10.0,
+            whitening_coefficient=1e-3,
+            # ~1000 optimise() calls (transitions) of memory: an
+            # order of magnitude slower than the value fit's
+            # ~10-transition blend.
+            target_ema_rate=0.999,
         ),
     )
 
@@ -150,10 +194,33 @@ def main() -> None:
         hidden_layer_count=value_function_config.phi_hidden_layer_count,
     ).to(model_device)
 
+    # When trained, consumers (the CME regression target and the
+    # value fit) read the optimiser's EMA target copy φ̄, never the
+    # fast φ: they see a near-static space and every loop into φ
+    # closes through a detach. When not trained, they read φ
+    # itself — no copy, no extra tick, the frozen-feature path.
+    phi_optimiser: PhiOptimiser | None = None
+    if phi_config.train_phi:
+        phi_optimiser = PhiOptimiser(
+            phi_function=phi_function,
+            cme_function=mu_function,
+            optimiser=optim.Adam(
+                params=phi_function.parameters(),
+                lr=phi_config.optimisation.learning_rate,
+            ),
+            replay_buffer=replay_buffer,
+            loss_fn=mse_loss,
+            config=phi_config,
+            optimisation_metrics=PhiOptimisationMetrics(),
+        )
+    consumers_phi = (
+        phi_optimiser.target_phi if phi_optimiser is not None else phi_function
+    )
+
     # v(s) = w·φ(s): φ enters as a constant, so only the value
     # weights w are trained.
     value_function = ValueFunction(
-        phi_function=phi_function,
+        phi_function=consumers_phi,
         phi_space_dim=cme_config.phi_space_dim,
     ).to(model_device)
 
@@ -185,7 +252,7 @@ def main() -> None:
 
     cme_optimiser = CMEOptimiser(
         cme_function=mu_function,
-        phi_function=phi_function,
+        phi_function=consumers_phi,
         optimiser=optim.Adam(
             params=mu_function.parameters(),
             lr=cme_config.optimisation.learning_rate,
@@ -205,6 +272,7 @@ def main() -> None:
         cme_optimiser=cme_optimiser,
         value_function_optimiser=value_function_optimiser,
         q_function=q_function,
+        phi_optimiser=phi_optimiser,
     )
 
     run_experiment(mdp=mdp, agent=agent, config=experiment_config)

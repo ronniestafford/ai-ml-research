@@ -14,6 +14,7 @@ from ai_ml_research.rl.dpcme.functions import QFunctionModelBased
 from ai_ml_research.rl.dpcme.metrics import (
     DPCMEOptimisationMetrics,
 )
+from ai_ml_research.rl.dpcme.phi.optimiser import PhiOptimiser
 from ai_ml_research.rl.dpcme.transition_model.optimiser import CMEOptimiser
 from ai_ml_research.rl.dpcme.value_function.optimiser import (
     ValueFunctionOptimiser,
@@ -30,10 +31,11 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
 
     The transition model and the state-action value function are injected
     Optimisable components: each owns its parameters, optimiser and
-    metrics. This agent selects actions with an ε-greedy policy over the
-    model-based q function (evaluated as a constant), fills the replay
-    buffer the components read, and decides the cadence — one tick of
-    each component per transition.
+    metrics, and an optional third trains the feature map φ. This
+    agent selects actions with an ε-greedy policy over the model-based
+    q function (evaluated as a constant), fills the replay buffer the
+    components read, and decides the cadence — one tick of each
+    component per transition.
     """
 
     def __init__(
@@ -46,12 +48,14 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         cme_optimiser: CMEOptimiser,
         value_function_optimiser: ValueFunctionOptimiser,
         q_function: QFunctionModelBased,
+        phi_optimiser: PhiOptimiser | None = None,
     ) -> None:
         super().__init__(optimisation_metrics)
         self.action_count = action_count
         self.state_dim = state_dim
         self.config = config
         self.replay_buffer = replay_buffer
+        self.phi_optimiser = phi_optimiser
         self.cme_optimiser = cme_optimiser
         self.value_function_optimiser = value_function_optimiser
         self.q_function = q_function  # evaluated as a constant
@@ -73,7 +77,13 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         )
 
     def sub_optimisables(self) -> tuple[Optimisable, ...]:
-        return (self.cme_optimiser, self.value_function_optimiser)
+        components: tuple[Optimisable, ...] = (
+            self.cme_optimiser,
+            self.value_function_optimiser,
+        )
+        if self.phi_optimiser is not None:
+            components = (self.phi_optimiser, *components)
+        return components
 
     def act(self, observation: torch.Tensor) -> torch.Tensor:
         # ε-greedy behaviour policy over the model-based q.
@@ -121,6 +131,11 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
     def optimise(self) -> None:
         if len(self.replay_buffer) <= self.config.warm_up_transition_count:
             return
+        # Cadence order: φ first (its EMA target tick feeds the CME
+        # regression target), then μ against φ̄, then w against the
+        # φ̄ space — w fastest, μ middle, φ̄ slowest.
+        if self.phi_optimiser is not None:
+            self.phi_optimiser.optimise()
         self.cme_optimiser.optimise()
         self.value_function_optimiser.optimise()
 

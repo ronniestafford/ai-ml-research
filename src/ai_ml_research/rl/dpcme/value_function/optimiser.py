@@ -112,7 +112,7 @@ class ValueFunctionOptimiser(
 
     def optimise(self) -> None:
         conservative_update_proportion: float = (
-            self.config.optimisation.conservative_update_proportion
+            self.config.optimisation.conservative_update_rate
         )
         weights = self.value_function.linear_layer.weight
 

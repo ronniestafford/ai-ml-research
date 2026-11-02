@@ -37,7 +37,7 @@ class ValueFunctionOptimisationConfig:
     # calls: the inner gradient descent produces w_inner, then
     #   w ← w_prev + conservative_update_proportion·(w_inner − w_prev).
     # 1.0 takes the inner result as is (no damping).
-    conservative_update_proportion: float = 1.0
+    conservative_update_rate: float = 1.0
 
 
 @dataclass(frozen=True)
