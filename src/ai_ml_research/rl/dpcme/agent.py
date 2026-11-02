@@ -102,6 +102,20 @@ class DPCMEAgent(Agent[DPCMEOptimisationMetrics]):
         # One-hot to match the env's action spec.
         return one_hot(action_idx, num_classes=self.action_count)
 
+    def act_batch(self, observations: torch.Tensor) -> torch.Tensor:
+        # Evaluation entry point: batched, pure-greedy, read-only
+        # (no ε, no replay-buffer write, no metric update).
+        # [batch, state_dim] -> one-hot [batch, action_count].
+        with torch.no_grad():
+            state = observations.to(self.model_device)
+            successor_values = model_based_successor_values(
+                self.q_function, state
+            )  # [batch, action_count]
+        action_idx = successor_values.argmax(dim=-1)
+        return one_hot(action_idx, num_classes=self.action_count).to(
+            observations.device
+        )
+
     def _greedy_action_idx(self, observation: torch.Tensor) -> torch.Tensor:
         # Greedy: argmax_a q(s,a) = argmax_a μ(s,a)·w. At decision
         # time r(s,a) is unknown (no reward model), so the reward

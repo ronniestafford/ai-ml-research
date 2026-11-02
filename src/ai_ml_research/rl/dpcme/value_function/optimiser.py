@@ -278,7 +278,18 @@ class ValueFunctionOptimiser(
         prefix = self._metric_prefix()
         v_rms = (float(metrics.v_sq_sum) / step_count) ** 0.5
         q_rms = (float(metrics.q_sq_sum) / step_count) ** 0.5
+        # Scale-free fit quality: RMS Bellman residual relative to
+        # the value scale. avg_loss alone grows with the square of
+        # the return scale (1/(1-backup_gamma)), so it keeps rising
+        # while v_rms climbs toward that ceiling even when the fit
+        # is converging; this ratio is the honest convergence
+        # signal.
+        avg_loss = float(metrics.loss_sum) / step_count
+        rel_resid = (
+            avg_loss**0.5 / q_rms if q_rms > 0 else float("nan")
+        )
 
         return base + (
             f" │ {prefix}v_rms: {v_rms:.4f} │ {prefix}q_rms: {q_rms:.4f}"
+            f" │ {prefix}rel_resid: {rel_resid:.4f}"
         )

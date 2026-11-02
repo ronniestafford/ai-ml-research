@@ -11,6 +11,7 @@ from ai_ml_research.rl.dqn.agent import (
 from ai_ml_research.rl.dqn.config import DQNConfig
 from ai_ml_research.rl.dqn.metrics import DQNOptimisationMetrics
 from ai_ml_research.rl.experiment import run_experiment, setup
+from ai_ml_research.rl.evaluation import EvaluationConfig
 
 
 def main() -> None:
@@ -95,7 +96,19 @@ def main() -> None:
         optimisation_metrics=DQNOptimisationMetrics(),
     )
 
-    run_experiment(mdp=env, agent=agent, config=experiment_config)
+    evaluation_config = EvaluationConfig(
+        # 8 concurrent greedy episodes on persistent cloned env
+        # workers, evaluated once per training trajectory.
+        episode_count=8,
+        base_seed=seed,
+    )
+
+    run_experiment(
+        mdp=env,
+        agent=agent,
+        config=experiment_config,
+        evaluation=evaluation_config,
+    )
 
 
 if __name__ == "__main__":

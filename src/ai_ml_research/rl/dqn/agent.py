@@ -171,6 +171,19 @@ class DQNAgent(Agent[DQNOptimisationMetrics]):
             action_count=self.action_count,
         )
 
+    def act_batch(self, observations: torch.Tensor) -> torch.Tensor:
+        # Evaluation entry point: batched, pure-greedy, read-only
+        # (no ε, no replay-buffer write, no metric update).
+        # [batch, state_dim] -> one-hot [batch, action_count].
+        with torch.no_grad():
+            q_values: torch.Tensor = self.q_function(
+                observations.to(self.model_device)
+            )  # [batch, action_count]
+        action_idx = q_values.argmax(dim=-1)
+        return one_hot(action_idx, num_classes=self.action_count).to(
+            observations.device
+        )
+
     def observe(self, transition: TensorDictBase) -> None:
         self.replay_buffer.add(transition)
         self._transition_count += 1

@@ -47,6 +47,7 @@ from ai_ml_research.rl.dpcme.transition_model.config import (
 from ai_ml_research.rl.dpcme.transition_model.metrics import (
     CMEOptimisationMetrics,
 )
+from ai_ml_research.rl.evaluation import EvaluationConfig
 
 
 def main() -> None:
@@ -77,6 +78,12 @@ def main() -> None:
         # positions/angles at their failure thresholds, velocities
         # at typical pre-failure magnitudes.
         state_scale=(2.4, 6.0, 0.42, 6.0),
+    )
+    evaluation_config = EvaluationConfig(
+        # 8 concurrent greedy episodes on persistent cloned env
+        # workers, evaluated once per training trajectory.
+        episode_count=8,
+        base_seed=seed,
     )
     config = DPCMEConfig(
         # Discount factor
@@ -275,7 +282,10 @@ def main() -> None:
         phi_optimiser=phi_optimiser,
     )
 
-    run_experiment(mdp=mdp, agent=agent, config=experiment_config)
+    run_experiment(
+        mdp=mdp, agent=agent, config=experiment_config,
+        evaluation=evaluation_config,
+    )
 
 
 if __name__ == "__main__":
