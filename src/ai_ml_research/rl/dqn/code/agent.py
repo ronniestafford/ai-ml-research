@@ -10,8 +10,8 @@ from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
 from ai_ml_research.rl.agent import Agent, get_epsilon_exp_decay
-from ai_ml_research.rl.dqn.config import DQNConfig
-from ai_ml_research.rl.dqn.metrics import DQNOptimisationMetrics
+from ai_ml_research.rl.dqn.code.config import DQNConfig
+from ai_ml_research.rl.dqn.code.metrics import DQNOptimisationMetrics
 
 
 class QFunction(nn.Module):

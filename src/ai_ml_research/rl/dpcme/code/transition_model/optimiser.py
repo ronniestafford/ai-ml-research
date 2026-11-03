@@ -7,13 +7,13 @@ from torch import optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
-from ai_ml_research.rl.dpcme.functions import (
+from ai_ml_research.rl.dpcme.code.functions import (
     MuFunction,
     PhiFunction,
     StaticPhiFunction,
 )
-from ai_ml_research.rl.dpcme.transition_model.config import CMEConfig
-from ai_ml_research.rl.dpcme.transition_model.metrics import (
+from ai_ml_research.rl.dpcme.code.transition_model.config import CMEConfig
+from ai_ml_research.rl.dpcme.code.transition_model.metrics import (
     CMEOptimisationMetrics,
 )
 from ai_ml_research.rl.optimisable import Optimisable

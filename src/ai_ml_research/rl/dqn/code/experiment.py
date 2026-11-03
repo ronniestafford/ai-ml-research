@@ -4,12 +4,12 @@ from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.config import ExperimentConfig, OptimisationConfig
-from ai_ml_research.rl.dqn.agent import (
+from ai_ml_research.rl.dqn.code.agent import (
     DQNAgent,
     QFunction,
 )
-from ai_ml_research.rl.dqn.config import DQNConfig
-from ai_ml_research.rl.dqn.metrics import DQNOptimisationMetrics
+from ai_ml_research.rl.dqn.code.config import DQNConfig
+from ai_ml_research.rl.dqn.code.metrics import DQNOptimisationMetrics
 from ai_ml_research.rl.experiment import run_experiment, setup
 from ai_ml_research.rl.evaluation import EvaluationConfig
 

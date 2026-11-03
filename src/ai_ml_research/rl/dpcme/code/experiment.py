@@ -6,45 +6,47 @@ from torchrl.data import LazyTensorStorage, TensorDictReplayBuffer
 from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.config import ExperimentConfig
-from ai_ml_research.rl.dpcme.bellman import model_based_expected_sarsa_target
-from ai_ml_research.rl.dpcme.functions import (
+from ai_ml_research.rl.dpcme.code.bellman import (
+    model_based_expected_sarsa_target,
+)
+from ai_ml_research.rl.dpcme.code.functions import (
     MuFunction,
     PhiFunction,
     QFunctionModelBased,
     ValueFunction,
 )
-from ai_ml_research.rl.dpcme.phi.optimiser import PhiOptimiser
-from ai_ml_research.rl.dpcme.phi.config import (
+from ai_ml_research.rl.dpcme.code.phi.optimiser import PhiOptimiser
+from ai_ml_research.rl.dpcme.code.phi.config import (
     PhiConfig,
     PhiOptimisationConfig,
 )
-from ai_ml_research.rl.dpcme.phi.metrics import (
+from ai_ml_research.rl.dpcme.code.phi.metrics import (
     PhiOptimisationMetrics,
 )
-from ai_ml_research.rl.dpcme.value_function.optimiser import (
+from ai_ml_research.rl.dpcme.code.value_function.optimiser import (
     ValueFunctionOptimiser,
 )
-from ai_ml_research.rl.dpcme.value_function.config import (
+from ai_ml_research.rl.dpcme.code.value_function.config import (
     ValueFunctionConfig,
     ValueFunctionOptimisationConfig,
 )
-from ai_ml_research.rl.dpcme.value_function.metrics import (
+from ai_ml_research.rl.dpcme.code.value_function.metrics import (
     ValueFunctionOptimisationMetrics,
 )
 from ai_ml_research.rl.experiment import run_experiment, setup
-from ai_ml_research.rl.dpcme.agent import DPCMEAgent
-from ai_ml_research.rl.dpcme.config import DPCMEConfig
-from ai_ml_research.rl.dpcme.metrics import (
+from ai_ml_research.rl.dpcme.code.agent import DPCMEAgent
+from ai_ml_research.rl.dpcme.code.config import DPCMEConfig
+from ai_ml_research.rl.dpcme.code.metrics import (
     DPCMEOptimisationMetrics,
 )
-from ai_ml_research.rl.dpcme.transition_model.optimiser import (
+from ai_ml_research.rl.dpcme.code.transition_model.optimiser import (
     CMEOptimiser,
 )
-from ai_ml_research.rl.dpcme.transition_model.config import (
+from ai_ml_research.rl.dpcme.code.transition_model.config import (
     CMEConfig,
     CMEOptimisationConfig,
 )
-from ai_ml_research.rl.dpcme.transition_model.metrics import (
+from ai_ml_research.rl.dpcme.code.transition_model.metrics import (
     CMEOptimisationMetrics,
 )
 from ai_ml_research.rl.evaluation import EvaluationConfig
@@ -283,7 +285,9 @@ def main() -> None:
     )
 
     run_experiment(
-        mdp=mdp, agent=agent, config=experiment_config,
+        mdp=mdp,
+        agent=agent,
+        config=experiment_config,
         evaluation=evaluation_config,
     )
 

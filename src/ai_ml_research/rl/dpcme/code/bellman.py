@@ -13,7 +13,7 @@ import torch
 from tensordict import TensorDictBase
 from torch.nn.functional import one_hot
 
-from ai_ml_research.rl.dpcme.functions import QFunctionModelBased
+from ai_ml_research.rl.dpcme.code.functions import QFunctionModelBased
 
 # Shared Bellman-target interface: given the model-based q function
 # (whose μ and w the targets read as their model/value constants)
@@ -46,7 +46,7 @@ ValueTarget = Callable[
 def _minibatch_cached_cme_features(
     minibatch: TensorDictBase,
 ) -> torch.Tensor | None:
-    from ai_ml_research.rl.dpcme.value_function.optimiser import (
+    from ai_ml_research.rl.dpcme.code.value_function.optimiser import (
         CACHED_CME_FEATURES_KEY,
     )
 

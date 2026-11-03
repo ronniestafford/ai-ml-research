@@ -6,18 +6,18 @@ from torch import optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
-from ai_ml_research.rl.dpcme.bellman import (
+from ai_ml_research.rl.dpcme.code.bellman import (
     ValueTarget,
     model_based_successor_features,
 )
-from ai_ml_research.rl.dpcme.functions import (
+from ai_ml_research.rl.dpcme.code.functions import (
     QFunctionModelBased,
     ValueFunction,
 )
-from ai_ml_research.rl.dpcme.value_function.config import (
+from ai_ml_research.rl.dpcme.code.value_function.config import (
     ValueFunctionConfig,
 )
-from ai_ml_research.rl.dpcme.value_function.metrics import (
+from ai_ml_research.rl.dpcme.code.value_function.metrics import (
     ValueFunctionOptimisationMetrics,
 )
 from ai_ml_research.rl.optimisable import Optimisable

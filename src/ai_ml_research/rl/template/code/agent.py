@@ -6,8 +6,8 @@ from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
 from ai_ml_research.rl.agent import Agent
-from ai_ml_research.rl.template.config import TemplateConfig
-from ai_ml_research.rl.template.metrics import TemplateOptimisationMetrics
+from ai_ml_research.rl.template.code.config import TemplateConfig
+from ai_ml_research.rl.template.code.metrics import TemplateOptimisationMetrics
 
 
 class TemplateAgent(Agent[TemplateOptimisationMetrics]):

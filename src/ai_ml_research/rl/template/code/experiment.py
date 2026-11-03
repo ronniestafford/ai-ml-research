@@ -3,9 +3,9 @@ from torchrl.envs import GymEnv
 
 from ai_ml_research.rl.config import ExperimentConfig, OptimisationConfig
 from ai_ml_research.rl.experiment import run_experiment, setup
-from ai_ml_research.rl.template.agent import TemplateAgent
-from ai_ml_research.rl.template.config import TemplateConfig
-from ai_ml_research.rl.template.metrics import (
+from ai_ml_research.rl.template.code.agent import TemplateAgent
+from ai_ml_research.rl.template.code.config import TemplateConfig
+from ai_ml_research.rl.template.code.metrics import (
     TemplateOptimisationMetrics,
 )
 

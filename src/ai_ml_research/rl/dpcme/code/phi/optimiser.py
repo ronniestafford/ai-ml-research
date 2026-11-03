@@ -8,12 +8,12 @@ from torch import optim
 from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
-from ai_ml_research.rl.dpcme.functions import (
+from ai_ml_research.rl.dpcme.code.functions import (
     MuFunction,
     PhiFunction,
 )
-from ai_ml_research.rl.dpcme.phi.config import PhiConfig
-from ai_ml_research.rl.dpcme.phi.metrics import (
+from ai_ml_research.rl.dpcme.code.phi.config import PhiConfig
+from ai_ml_research.rl.dpcme.code.phi.metrics import (
     PhiOptimisationMetrics,
 )
 from ai_ml_research.rl.optimisable import Optimisable

@@ -8,15 +8,17 @@ from tensordict import TensorDictBase
 from torchrl.data import TensorDictReplayBuffer
 
 from ai_ml_research.rl.agent import Agent, get_epsilon_exp_decay
-from ai_ml_research.rl.dpcme.bellman import model_based_successor_values
-from ai_ml_research.rl.dpcme.config import DPCMEConfig
-from ai_ml_research.rl.dpcme.functions import QFunctionModelBased
-from ai_ml_research.rl.dpcme.metrics import (
+from ai_ml_research.rl.dpcme.code.bellman import model_based_successor_values
+from ai_ml_research.rl.dpcme.code.config import DPCMEConfig
+from ai_ml_research.rl.dpcme.code.functions import QFunctionModelBased
+from ai_ml_research.rl.dpcme.code.metrics import (
     DPCMEOptimisationMetrics,
 )
-from ai_ml_research.rl.dpcme.phi.optimiser import PhiOptimiser
-from ai_ml_research.rl.dpcme.transition_model.optimiser import CMEOptimiser
-from ai_ml_research.rl.dpcme.value_function.optimiser import (
+from ai_ml_research.rl.dpcme.code.phi.optimiser import PhiOptimiser
+from ai_ml_research.rl.dpcme.code.transition_model.optimiser import (
+    CMEOptimiser,
+)
+from ai_ml_research.rl.dpcme.code.value_function.optimiser import (
     ValueFunctionOptimiser,
 )
 from ai_ml_research.rl.optimisable import Optimisable
