@@ -1,7 +1,7 @@
 # Dev Environment Setup
 
 ## Project Structure
-Experiments and algorithms are contained in the [src](/src/) folder.
+Algorithms are contained in the [src](/src/) folder.
 
 ## Native (non DevContainer) Development
 To exploit Apple Metal GPU acceleration, develop on the host. Requires installation [uv](https://docs.astral.sh/uv/getting-started/installation/) directly on your dev machine to manage python and project dependencies,

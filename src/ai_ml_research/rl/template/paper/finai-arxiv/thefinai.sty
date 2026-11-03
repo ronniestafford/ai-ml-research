@@ -1,0 +1,199 @@
+% thefinai.sty — The Fin AI preprint / technical-report style for arXiv and Overleaf   (v2)
+% Layout follows the header-card style common in current industry reports on arXiv / HF Papers:
+% title, authors, abstract and links in one tinted card, Times body, sans headings.
+% Engines: pdfLaTeX (arXiv default) and XeLaTeX. Only standard TeX Live packages.
+%
+% Options
+%   numbers     numeric citations [1] instead of author–year
+%   anonymous   hide authors, affiliations, correspondence and links (blind review)
+%   review      line numbers
+%
+\NeedsTeXFormat{LaTeX2e}
+\ProvidesPackage{thefinai}[2026/10/10 v2.0 The Fin AI preprint style]
+
+\newif\iffinai@numbers \newif\iffinai@anon \newif\iffinai@review
+\newif\iffinai@titledone
+\DeclareOption{numbers}{\finai@numberstrue}
+\DeclareOption{anonymous}{\finai@anontrue}
+\DeclareOption{review}{\finai@reviewtrue}
+\ProcessOptions\relax
+
+% ---------------------------------------------------------------- page and fonts
+\RequirePackage[letterpaper,margin=1in,footskip=28pt]{geometry}
+\RequirePackage{iftex}
+\ifPDFTeX \RequirePackage[T1]{fontenc}\RequirePackage[utf8]{inputenc}\fi
+\RequirePackage{amsmath,amsthm}          % before newtxmath
+\RequirePackage{newtxtext,newtxmath}     % Times body, as in most arXiv / HF Papers reports
+\RequirePackage[scale=0.92]{inter}       % Inter (\sffamily) for title, headings and labels, as on thefin.ai
+\ifPDFTeX\RequirePackage[scaled=0.85]{beramono}\fi
+\RequirePackage{microtype}
+
+% ---------------------------------------------------------------- colours (thefin.ai)
+\RequirePackage[dvipsnames,table]{xcolor}
+\definecolor{finaiink}{HTML}{0F1528}
+\definecolor{finaisoft}{HTML}{4F5A6E}
+\definecolor{finaimuted}{HTML}{8A93A3}
+\definecolor{finailine}{HTML}{DCE3EE}
+\definecolor{finaiblue}{HTML}{0061B7}
+\definecolor{finaideep}{HTML}{1F3E99}
+\definecolor{finailight}{HTML}{6CA8D9}
+\definecolor{finaitint}{HTML}{E8EFF8}
+\definecolor{finaicard}{HTML}{F1F5FB}
+\definecolor{finaigold}{HTML}{C9A24A}
+\definecolor{finaigreen}{HTML}{16A34A}
+
+% ---------------------------------------------------------------- packages
+\RequirePackage{graphicx,booktabs,multirow,array,tabularx}
+\RequirePackage{caption,subcaption}
+\RequirePackage[shortlabels]{enumitem}
+\RequirePackage{titlesec,fancyhdr,environ}
+\RequirePackage{tikz}
+\RequirePackage{pgfplots}\pgfplotsset{compat=1.17}
+\RequirePackage[most]{tcolorbox}
+\RequirePackage{fontawesome5}
+\RequirePackage{xspace}
+\iffinai@numbers \RequirePackage[numbers,sort&compress]{natbib}\else \RequirePackage[round,authoryear]{natbib}\fi
+\iffinai@review \RequirePackage[pagewise]{lineno}\linenumbers
+  \renewcommand\linenumberfont{\normalfont\tiny\sffamily\color{finaimuted}}\fi
+\RequirePackage[colorlinks=true,linkcolor=finaiblue,citecolor=finaiblue,urlcolor=finaiblue,
+  pdfborder={0 0 0},bookmarksnumbered=true]{hyperref}
+\RequirePackage[nameinlink,capitalise,noabbrev]{cleveref}
+\urlstyle{same}
+\setlist{itemsep=0.1em,topsep=0.3em}
+
+\newcommand{\finai}{The Fin AI\xspace}
+% small hugging-face style smiley for Hugging Face links (no emoji font needed)
+\newcommand{\hficon}{\begin{tikzpicture}[baseline=-0.25em,x=0.5em,y=0.5em]
+  \fill[YellowOrange!70!yellow] (0,0) circle (1); \fill[black] (-0.38,0.22) circle (0.13) (0.38,0.22) circle (0.13);
+  \draw[black,line width=0.06em] (-0.45,-0.22) .. controls (0,-0.62) .. (0.45,-0.22);
+  \fill[YellowOrange] (-0.95,-0.55) circle (0.32) (0.95,-0.55) circle (0.32);\end{tikzpicture}}
+
+% ---------------------------------------------------------------- title-card fields
+\def\finai@authors{}\def\finai@affils{}\def\finai@notes{}\def\finai@corr{}\def\finai@meta{}
+\def\finai@label{}\def\finai@abstract{}
+\renewcommand{\author}[1]{\gdef\finai@authors{#1}}
+\newcommand{\affiliation}[2][]{\g@addto@macro\finai@affils{\mbox{\textsuperscript{#1}#2}\hspace{1em}}}
+\newcommand{\authornote}[1]{\g@addto@macro\finai@notes{\mbox{#1}\hspace{1em}}}
+\newcommand{\correspondence}[1]{\gdef\finai@corr{#1}}
+\newcommand{\reportlabel}[1]{\gdef\finai@label{#1}}   % optional small label above the title, e.g. Technical Report
+\newcommand{\shorttitle}[1]{}                          % kept for compatibility (no running header in v2)
+% \metadata[<label>]{<value>}: Code, Data, Models, Hugging Face, Website, Leaderboard, Demo, Paper, Blog, or anything
+\newcommand{\metadata}[2][]{\g@addto@macro\finai@meta{\finai@row{#1}{#2}}}
+\newcommand{\ghlink}[1]{\href{https://github.com/#1}{github.com/#1}}
+\newcommand{\hflink}[1]{\href{https://huggingface.co/#1}{huggingface.co/#1}}
+
+\@namedef{finai@icon@Date}{\faCalendar[regular]}
+\@namedef{finai@icon@Correspondence}{\faEnvelope[regular]}
+\@namedef{finai@icon@Code}{\faGithub}
+\@namedef{finai@icon@Hugging Face}{\hficon}
+\@namedef{finai@icon@Data}{\hficon}
+\@namedef{finai@icon@Models}{\hficon}
+\@namedef{finai@icon@Leaderboard}{\faTrophy}
+\@namedef{finai@icon@Demo}{\faPlayCircle[regular]}
+\@namedef{finai@icon@Website}{\faGlobe}
+\@namedef{finai@icon@Project Page}{\faGlobe}
+\@namedef{finai@icon@Blog}{\faPen}
+\@namedef{finai@icon@Paper}{\faFile*[regular]}
+\newcommand{\finai@icon}[1]{\ifcsname finai@icon@#1\endcsname\@nameuse{finai@icon@#1}\else\faLink\fi}
+\newcommand{\finai@row}[2]{\mbox{\makebox[1.25em][c]{\color{finaiblue}\finai@icon{#1}}\hspace{0.3em}%
+  {\sffamily\bfseries #1:}}\enspace #2\par}
+
+% abstract: captured and printed inside the card by \maketitle (put it before \maketitle);
+% used after \maketitle it prints as a plain block.
+\RenewEnviron{abstract}{%
+  \iffinai@titledone
+    \par\begin{center}\begin{minipage}{0.92\linewidth}\small{\sffamily\bfseries Abstract.}\enspace\BODY\end{minipage}\end{center}\par
+  \else \global\let\finai@abstract\BODY \fi}
+
+\newcommand{\finai@metablock}{%
+  \ifx\@date\@empty\else\finai@row{Date}{\@date}\fi
+  \ifx\finai@corr\@empty\else\finai@row{Correspondence}{\finai@corr}\fi
+  \finai@meta}
+
+\renewcommand{\maketitle}{%
+  \thispagestyle{finaiplain}%
+  \begin{tcolorbox}[enhanced,colback=finaicard,frame hidden,boxrule=0pt,arc=7pt,
+      left=20pt,right=20pt,top=18pt,bottom=16pt,before skip=0pt,after skip=16pt]
+    \raggedright
+    \ifx\finai@label\@empty\else{\sffamily\bfseries\scriptsize\color{finaiblue}\MakeUppercase{\finai@label}}\par\vspace{5pt}\fi
+    {\sffamily\bfseries\fontsize{20.5}{25}\selectfont\color{finaiblue}\@title\par}%
+    \vspace{12pt}%
+    \iffinai@anon
+      {\sffamily\normalsize\color{finaiink}Anonymous Authors\par}
+    \else
+      {\sffamily\fontsize{10.5}{14}\selectfont\color{finaiink}\finai@authors\par}\vspace{5pt}%
+      {\sffamily\footnotesize\color{finaisoft}\finai@affils\par}%
+      \ifx\finai@notes\@empty\else\vspace{2pt}{\sffamily\footnotesize\color{finaisoft}\finai@notes\par}\fi
+    \fi
+    \ifx\finai@abstract\@empty\else
+      \vspace{12pt}{\fontsize{10}{13.2}\selectfont\justifying\finai@abstract\par}%
+    \fi
+    \vspace{12pt}%
+    \begin{minipage}[b]{\dimexpr\linewidth-10.5em}\raggedright
+      \fontsize{9}{12.5}\selectfont\setlength{\parskip}{1.5pt}%
+      \iffinai@anon \ifx\@date\@empty\else\finai@row{Date}{\@date}\fi \else \finai@metablock \fi
+    \end{minipage}%
+  \end{tcolorbox}%
+  \global\finai@titledonetrue
+}
+\providecommand{\justifying}{\leftskip=0pt\rightskip=0pt\parfillskip=0pt plus 1fil\relax}
+
+% ---------------------------------------------------------------- headings (Inter, ink, compact)
+\titleformat{\section}{\sffamily\bfseries\fontsize{13}{16}\selectfont\color{finaiink}}{\thesection}{0.7em}{}
+\titleformat{\subsection}{\sffamily\bfseries\fontsize{11}{14}\selectfont\color{finaiink}}{\thesubsection}{0.65em}{}
+\titleformat{\subsubsection}{\sffamily\bfseries\normalsize\color{finaiink}}{\thesubsubsection}{0.6em}{}
+\titleformat{\paragraph}[runin]{\bfseries\color{finaiink}}{}{0pt}{}[.]
+\titlespacing*{\section}{0pt}{1.4em}{0.6em}
+\titlespacing*{\subsection}{0pt}{1.1em}{0.45em}
+\titlespacing*{\subsubsection}{0pt}{0.9em}{0.35em}
+\titlespacing*{\paragraph}{0pt}{0.6em}{0.6em}
+
+% ---------------------------------------------------------------- captions, tables
+\captionsetup{font=small,labelfont=bf,labelsep=colon,skip=6pt}
+\captionsetup[table]{position=top}
+\newcommand{\best}[1]{\textbf{#1}}
+\newcommand{\second}[1]{\underline{#1}}
+\newcommand{\up}[1]{\textcolor{finaigreen}{\scriptsize$\uparrow$#1}}
+\newcommand{\down}[1]{\textcolor{BrickRed}{\scriptsize$\downarrow$#1}}
+\newcommand{\oursrow}{\rowcolor{finaitint}}          % highlight your method's row
+\newcommand{\headrow}{\rowcolor{finaicard}}          % optional tinted header row
+\newcommand{\tablehead}[1]{\textbf{#1}}
+
+% ---------------------------------------------------------------- callouts
+\newtcolorbox{takeaway}[1][Key Takeaways]{enhanced,breakable,colback=finaicard,frame hidden,boxrule=0pt,arc=5pt,
+  left=12pt,right=12pt,top=8pt,bottom=8pt,before skip=10pt,after skip=10pt,
+  fonttitle=\sffamily\bfseries\small,coltitle=finaiblue,colbacktitle=finaicard,title={#1},attach title to upper={\par\vspace{3pt}}}
+\newtcolorbox{finding}[1]{enhanced,breakable,colback=white,colframe=finailine,boxrule=0.6pt,arc=5pt,
+  left=12pt,right=12pt,top=7pt,bottom=7pt,before skip=10pt,after skip=10pt,
+  fonttitle=\sffamily\bfseries\small,coltitle=finaiblue,colbacktitle=white,title={#1},attach title to upper={\enspace}}
+\newtcolorbox{promptbox}[1][Prompt]{enhanced,breakable,colback=finaicard,frame hidden,boxrule=0pt,arc=5pt,
+  left=12pt,right=12pt,top=8pt,bottom=8pt,before skip=10pt,after skip=10pt,fontupper=\ttfamily\small,
+  fonttitle=\sffamily\bfseries\small,coltitle=finaisoft,colbacktitle=finaicard,title={#1},attach title to upper={\par\vspace{3pt}}}
+
+\theoremstyle{plain}\newtheorem{theorem}{Theorem}\newtheorem{proposition}{Proposition}\newtheorem{lemma}{Lemma}
+\theoremstyle{definition}\newtheorem{definition}{Definition}
+
+% ---------------------------------------------------------------- plots in the brand palette
+\pgfplotscreateplotcyclelist{finai}{%
+  {finaiblue,thick,mark=*,mark options={fill=finaiblue}},{finailight,thick,mark=square*,mark options={fill=finailight}},
+  {finaideep,thick,mark=triangle*,mark options={fill=finaideep}},{finaigold,thick,mark=diamond*,mark options={fill=finaigold}},
+  {finaimuted,thick,mark=o}}
+\pgfplotscreateplotcyclelist{finaibars}{{fill=finaiblue,draw=none},{fill=finailight,draw=none},
+  {fill=finaimuted!45,draw=none},{fill=finaideep,draw=none},{fill=finaigold,draw=none}}
+\pgfplotsset{
+  finai/.style={cycle list name=finai,axis line style={finaimuted},tick style={finaimuted},
+    tick label style={font=\sffamily\scriptsize,color=finaisoft},label style={font=\sffamily\small},
+    title style={font=\sffamily\bfseries\small},legend style={font=\sffamily\scriptsize,draw=none,fill=none},
+    grid style={finailine},ymajorgrids,axis x line*=bottom,axis y line*=left},
+  finaibars/.style={ybar,area legend,cycle list name=finaibars,bar cycle list/.style={/pgfplots/cycle list name=finaibars}}}
+
+% ---------------------------------------------------------------- page style: page number only
+\fancypagestyle{finaiplain}{\fancyhf{}\renewcommand{\headrulewidth}{0pt}%
+  \fancyfoot[C]{\sffamily\footnotesize\color{finaisoft}\thepage}}
+\pagestyle{finaiplain}
+
+% ---------------------------------------------------------------- appendix
+\let\finai@appendix\appendix
+\renewcommand{\appendix}{\clearpage\finai@appendix}
+
+\endinput

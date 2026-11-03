@@ -1,0 +1,177 @@
+% Paper template for the <AlgorithmName> RL agent.
+%
+% This document is based on the arxiv LaTeX style template by George Kour:
+%   https://github.com/kourgeorge/arxiv-style (MIT License)
+% The MIT license notice (License.txt) is kept with the upstream template
+% in rl/template/paper/arxiv-style/. Papers built from this skeleton credit
+% the upstream project via the title-page footnote below and the
+% kour_arxiv_style entry in references.bib; mention/link the upstream
+% project if you redistribute this skeleton, and cite it when the resulting
+% paper is published.
+%
+% The implementation this paper accompanies lives in ../code/. State the
+% algorithm's origin, authorship and associated publications below (see the
+% repository citation policy in AGENTS.md); do not assume a thesis origin
+% unless documented.
+%
+% Build: pdflatex main && bibtex main && pdflatex main && pdflatex main
+
+\documentclass{article}
+
+\usepackage{arxiv}
+
+\usepackage[utf8]{inputenc} % allow utf-8 input
+\usepackage[T1]{fontenc}    % use 8-bit T1 fonts
+\usepackage{hyperref}       % hyperlinks
+\usepackage{url}            % simple URL typesetting
+\usepackage{booktabs}       % professional-quality tables
+\usepackage{amsfonts}       % blackboard math symbols
+\usepackage{nicefrac}       % compact symbols for 1/2, etc.
+\usepackage{microtype}      % microtypography
+\usepackage{cleveref}       % smart cross-referencing
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{doi}
+
+\title{<AlgorithmName>\thanks{Typeset using the \emph{arxiv} \LaTeX{} style
+	by George Kour, \url{https://github.com/kourgeorge/arxiv-style}
+	(MIT license), see \citep{kour_arxiv_style}.}}
+
+% Here you can change the date presented in the paper title
+%\date{September 9, 1985}
+% Or remove it
+%\date{}
+
+\newif\ifuniqueAffiliation
+% Comment to use multiple affiliations variant of author block
+\uniqueAffiliationtrue
+
+\ifuniqueAffiliation % Standard variant of author block
+\author{ \href{https://orcid.org/0000-0000-0000-0000}{\includegraphics[scale=0.06]{orcid.pdf}\hspace{1mm}Author Name}\thanks{Use footnote for providing further
+		information about author (webpage, alternative
+		address)---\emph{not} for acknowledging funding agencies.} \\
+	Department of Computer Science\\
+	Cranberry-Lemon University\\
+	Pittsburgh, PA 15213 \\
+	\texttt{author@university.edu} \\
+	%% examples of more authors
+	%% \And
+	%% Coauthor \\
+	%% Affiliation \\
+	%% Address \\
+	%% \texttt{email} \\
+}
+\else
+% Multiple affiliations variant of author block
+\usepackage{authblk}
+\renewcommand\Authfont{\bfseries}
+\setlength{\affilsep}{0em}
+% box is needed for correct spacing with authblk
+\newbox{\orcid}\sbox{\orcid}{\includegraphics[scale=0.06]{orcid.pdf}}
+\author[1]{%
+	\href{https://orcid.org/0000-0000-0000-0000}{\usebox{\orcid}\hspace{1mm}Author Name\thanks{\texttt{author@university.edu}}}%
+}
+\affil[1]{Department of Computer Science, Cranberry-Lemon University, Pittsburgh, PA 15213}
+\fi
+
+% Uncomment to override  the `A preprint' in the header
+%\renewcommand{\headeright}{Technical Report}
+%\renewcommand{\undertitle}{Technical Report}
+\renewcommand{\shorttitle}{<AlgorithmName>}
+
+%%% Add PDF metadata to help others organize their library
+\hypersetup{
+pdftitle={<AlgorithmName>},
+pdfsubject={cs.LG, cs.AI},
+pdfauthor={Author Name},
+pdfkeywords={reinforcement learning},
+}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+	Summary of the algorithm and results.
+\end{abstract}
+
+
+% keywords can be removed
+\keywords{reinforcement learning \and Second keyword \and More}
+
+
+\section{Introduction}
+\label{sec:introduction}
+
+Citations use \verb+natbib+, e.g.\ an example upstream reference
+\citep{kour2014real, kour2014fast}.
+
+
+\section{Related Work}
+\label{sec:related-work}
+
+Record the algorithm's origin, authorship and associated publications here.
+
+
+\section{Method}
+\label{sec:method}
+
+Cite the repository implementation \texttt{../code/} \citep{ai_ml_research}
+and, where the algorithm is thesis-derived, the PhD thesis
+\citep{ronnie_stafford_thesis_2020}; entries live in ../citation.bib.
+
+\begin{equation}
+	\xi _{ij}(t)=P(x_{t}=i,x_{t+1}=j|y,v,w;\theta)= {\frac {\alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}{\sum _{i=1}^{N} \sum _{j=1}^{N} \alpha _{i}(t)a^{w_t}_{ij}\beta _{j}(t+1)b^{v_{t+1}}_{j}(y_{t+1})}}
+\end{equation}
+
+
+\section{Experiments}
+\label{sec:experiments}
+
+Results produced by \texttt{python -m ai\_ml\_research.rl.<name>.code.experiment}.
+
+\begin{figure}
+	\centering
+	\fbox{\rule[-.5cm]{4cm}{4cm} \rule[-.5cm]{4cm}{0cm}}
+	\caption{Sample figure caption.}
+	\label{fig:fig1}
+\end{figure}
+
+\begin{table}
+	\caption{Sample table title}
+	\centering
+	\begin{tabular}{lll}
+		\toprule
+		\multicolumn{2}{c}{Part}                   \\
+		\cmidrule(r){1-2}
+		Name     & Description     & Size ($\mu$m) \\
+		\midrule
+		Dendrite & Input terminal  & $\sim$100     \\
+		Axon     & Output terminal & $\sim$10      \\
+		Soma     & Cell body       & up to $10^6$  \\
+		\bottomrule
+	\end{tabular}
+	\label{tab:table}
+\end{table}
+
+
+\section{Conclusion}
+\label{sec:conclusion}
+
+
+\bibliographystyle{unsrtnat}
+\bibliography{references,../citation}  %%% For arXiv submissions, run bibtex locally and inline the generated .bbl, then comment this line out.
+
+
+%%% Uncomment this section and comment out the \bibliography{references,../citation} line above to use inline references.
+% \begin{thebibliography}{1}
+%
+% 	\bibitem{kour2014real}
+% 	George Kour and Raid Saabne.
+% 	\newblock Real-time segmentation of on-line handwritten arabic script.
+% 	\newblock In {\em Frontiers in Handwriting Recognition (ICFHR), 2014 14th
+% 			International Conference on}, pages 417--422. IEEE, 2014.
+%
+% \end{thebibliography}
+
+
+\end{document}

@@ -1,0 +1,170 @@
+% Paper template for the <AlgorithmName> RL agent (The Fin AI arXiv style).
+%
+% This document is based on the arXiv template by The Fin AI:
+%   https://github.com/The-FinAI/arxiv-template (MIT License)
+% The MIT license notice (LICENSE) is kept with the upstream template
+% in rl/template/paper/finai-arxiv/. Note the license exception: The Fin AI
+% name and logo are NOT covered by the MIT license and may only be used for
+% papers by The Fin AI and its collaborators, so the logo has been removed
+% from the bundled style and this skeleton uses generic author/affiliation
+% placeholders.
+% Papers built from this skeleton credit the upstream project via the
+% title-page footnote below and the finai_arxiv_template entry in
+% references.bib; mention/link the upstream project if you redistribute
+% this skeleton, and cite it when the resulting paper is published.
+%
+% The implementation this paper accompanies lives in ../code/. State the
+% algorithm's origin, authorship and associated publications below (see the
+% repository citation policy in AGENTS.md); do not assume a thesis origin
+% unless documented.
+%
+% Build: latexmk -pdf main.tex (pdfLaTeX, TeX Live 2023+)
+% Put the abstract before \maketitle so it lands inside the title card.
+
+\ifdefined\XeTeXversion\else\ifdefined\directlua\else\pdfoutput=1\fi\fi % arXiv: pdfLaTeX (keep in the first 5 lines)
+\documentclass[11pt]{article}
+\usepackage{thefinai}
+% Options: [numbers] numeric citations · [anonymous] blind review · [review] line numbers
+
+% ------------------------------------------------------------------ title card
+\title{<AlgorithmName>\,\texorpdfstring{\footnotemark}{}}
+\date{October 10, 2026}
+% \reportlabel{Technical Report}   % optional small label above the title
+
+\author{%
+  First Author\textsuperscript{1,*}, Second Author\textsuperscript{1,2,*}, Third Author\textsuperscript{3},
+  Fourth Author\textsuperscript{2}, Fifth Author\textsuperscript{1,\dag}%
+}
+\affiliation[1]{Your Organization}
+\affiliation[2]{University One}
+\affiliation[3]{Institute Two}
+\authornote{\textsuperscript{*}Equal contribution}
+\authornote{\textsuperscript{\dag}Corresponding author}
+
+\correspondence{\href{mailto:you@your-organization.org}{you@your-organization.org}}
+%% example metadata links:
+% \metadata[Code]{\ghlink{YourOrg/YourRepo}}
+% \metadata[Hugging Face]{\hflink{collections/YourOrg}}
+
+\begin{document}
+
+% The abstract goes before \maketitle so it is placed inside the title card.
+\begin{abstract}
+Replace this paragraph with a 150--250 word abstract. State the problem in
+reinforcement learning you address, what you release (an algorithm, benchmark,
+dataset or agent system), how you evaluate it, and the one or two results a
+reader should remember. Keep numbers concrete and claims checkable. The date,
+correspondence and links below the abstract come from \texttt{\textbackslash date},
+\texttt{\textbackslash correspondence} and \texttt{\textbackslash metadata}.
+\end{abstract}
+
+\maketitle
+
+% Title-page footnote for the upstream GitHub template repository. The title
+% sits inside the title-card box, so the mark is placed in \title and the
+% text printed here, outside the box.
+\footnotetext[1]{Typeset using The Fin AI arXiv template,
+\url{https://github.com/The-FinAI/arxiv-template} (MIT license; the Fin AI
+name and logo are not used, per the license terms) \citep{finai_arxiv_template}.}
+\setcounter{footnote}{1} % keep later \footnote numbering after this one
+
+% A teaser figure on page 1, as most current reports do (illustrative numbers).
+\begin{figure}[h]
+  \centering
+  \begin{tikzpicture}
+    \begin{axis}[finai,finaibars,width=\linewidth,height=4.6cm,bar width=9pt,ymin=0,ymax=90,
+      symbolic x coords={Sentiment,QA,Extraction,Forecasting,Trading},xtick=data,
+      ylabel={Score},enlarge x limits=0.12,legend columns=-1,legend style={at={(0.5,1.04)},anchor=south},
+      nodes near coords,every node near coord/.append style={font=\sffamily\tiny,color=finaisoft}]
+      \addplot coordinates {(Sentiment,82) (QA,68) (Extraction,58) (Forecasting,54) (Trading,61)};
+      \addplot coordinates {(Sentiment,78) (QA,63) (Extraction,55) (Forecasting,49) (Trading,52)};
+      \addplot coordinates {(Sentiment,71) (QA,57) (Extraction,47) (Forecasting,45) (Trading,44)};
+      \legend{Ours (8B), Model A (70B), Model B (8B)}
+    \end{axis}
+  \end{tikzpicture}
+  \caption{A teaser figure summarizing the main result. Numbers are illustrative.}
+  \label{fig:teaser}
+\end{figure}
+
+% ------------------------------------------------------------------ body
+\section{Introduction}
+Introduce the reinforcement learning problem, then list the contributions:
+
+\begin{itemize}
+  \item \textbf{Algorithm.} What is new about the method (see \texttt{../code/}).
+  \item \textbf{Evaluation.} Which environments were tested, and under which settings.
+  \item \textbf{Findings.} The main empirical takeaways (\cref{sec:results}).
+\end{itemize}
+
+\begin{takeaway}
+Use this box for the one or two sentences a busy reader should remember.
+\end{takeaway}
+
+\section{Related Work}
+Position the work against prior algorithms. Record this algorithm's origin,
+authorship and associated publications here. Group prior work by theme rather
+than listing papers one by one \citep{xie2023pixiu}.
+
+\section{Method}
+\label{sec:method}
+\subsection{Formulation}
+Describe the algorithm implemented in \texttt{../code/}, citing the
+repository implementation \citep{ai_ml_research} and, where the algorithm
+is thesis-derived, the PhD thesis \citep{ronnie_stafford_thesis_2020};
+entries live in ../citation.bib. Define notation where
+needed, for example accuracy over a test set $\mathcal{D}$:
+\begin{equation}
+  \mathrm{Acc} = \frac{1}{|\mathcal{D}|}\sum_{(x,y)\in\mathcal{D}} \mathbb{I}\left[f(x) = y\right].
+\end{equation}
+
+\subsection{Hyperparameters}
+\begin{promptbox}[Experiment configuration]
+Hyperparameters live in \texttt{../code/experiment.py}.
+\end{promptbox}
+
+\section{Results}
+\label{sec:results}
+Results produced by \texttt{python -m ai\_ml\_research.rl.<name>.code.experiment}.
+\Cref{tab:main} shows the table style: booktabs rules, \best{bold} for the best and \second{underline} for the
+second-best result, and a tinted row for your method (\texttt{\textbackslash oursrow}).
+
+\begin{table}[t]
+  \caption{Main results (illustrative numbers). Higher is better.}
+  \label{tab:main}
+  \centering\small
+  \begin{tabular}{lccccc}
+    \toprule
+    \tablehead{Model} & \tablehead{Sentiment} & \tablehead{QA} & \tablehead{Extraction} & \tablehead{Trading} & \tablehead{Avg.} \\
+    \midrule
+    Model A (70B) & \second{78.0} & \second{63.0} & \second{55.0} & \second{52.0} & \second{62.0} \\
+    Model B (8B)  & 71.0 & 57.0 & 47.0 & 44.0 & 54.8 \\
+    \oursrow Ours (8B) & \best{82.0} & \best{68.0} & \best{58.0} & \best{61.0} & \best{67.3}\up{5.3} \\
+    \bottomrule
+  \end{tabular}
+\end{table}
+
+\begin{finding}{Finding 1.}
+State each empirical result in one or two sentences, then point to the table or figure that supports it.
+\end{finding}
+
+\section{Conclusion}
+Summarize what was released, what it shows, and the main limitations.
+
+\section*{Limitations and Ethics}
+Describe data licenses, personal-data handling and intended use.
+
+\section*{Acknowledgments}
+Thank funders, compute providers and annotators.
+
+\bibliographystyle{plainnat}
+\bibliography{references,../citation}
+
+% ------------------------------------------------------------------ appendix
+\appendix
+\section{Author Contributions}
+List each author's role (conceptualization, data, experiments, writing).
+
+\section{Additional Results}
+Extra tables, prompts and examples go here.
+
+\end{document}

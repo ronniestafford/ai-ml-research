@@ -2,7 +2,7 @@
   "name": "devcontainer-ai-ml-research-latex",
   "dockerComposeFile": "../docker-compose.yml",
   "service": "ai-ml-research-latex",
-  "workspaceFolder": "/workspace/documentation",
+  "workspaceFolder": "/workspace",
   "updateContentCommand": "npm install -g @devcontainers/cli",
   "customizations": {
     "vscode": {

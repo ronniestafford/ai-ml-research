@@ -30,7 +30,7 @@ abstract: >-
   research, experimentation, benchmarking, and reproducibility.
   Individual algorithms may originate from the author's PhD research
   or other published academic work. Users should consult the
-  corresponding Markdown documentation for algorithm-specific
+  corresponding Markdown documentation and citation.bib for algorithm-specific
   provenance and citation requirements.
 
 keywords:
@@ -53,3 +53,4 @@ preferred-citation:
   year: 2026
   version: "0.1.0"
   url: "https://github.com/ronniestafford/ai-ml-research"
+
